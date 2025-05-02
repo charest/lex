@@ -1,4 +1,4 @@
-#include <lexer.hpp>
+#include <hand.hpp>
 #include <stream.hpp>
 
 #include <gtest/gtest.h>
@@ -97,23 +97,23 @@ void test_w_ident(
 // Individual tests
 //=============================================================================
 
-TEST(LexerTestF, ident) {
+TEST(hand, ident) {
   test_w_ident("ident", LEX_IDENT);
   test_w_ident("id1ent", LEX_IDENT);
   test_w_ident("1ident", {{LEX_INT, "1"}, {LEX_IDENT, "ident"}});
 }
 
 
-TEST(LexerTestF, quote) {
+TEST(hand, quote) {
   test_w_ident("\"Quoted\"", {{LEX_QUOTED, "Quoted"}});
 }
 
-TEST(LexerTestF, comment) {
+TEST(hand, comment) {
   test_w_ident("# test", {{LEX_COMMENT, ""}});
   test_w_ident("# test\nident", {{LEX_COMMENT, ""}, {LEX_IDENT, "ident"}});
 }
 
-TEST(LexerTestF, number) {
+TEST(hand, number) {
   test_w_ident("1"      , LEX_INT);
   test_w_ident("12"     , LEX_INT);
   test_w_ident("1.2"    , LEX_REAL);
@@ -132,7 +132,7 @@ TEST(LexerTestF, number) {
   test_w_ident("1.2e ", LEX_REAL, true);
 }
 
-TEST(LexerTestF, ops) {
+TEST(hand, ops) {
   test("+" , '+');
   test("+=", LEX_ADD_EQ);
   test("-" , '-');
@@ -149,14 +149,14 @@ TEST(LexerTestF, ops) {
   test(">=", LEX_GE);
 }
 
-TEST(LexerTestF, punc) {
+TEST(hand, punc) {
   test("," , ',');
   test(";" , ';');
   test("." , '.');
   test("%" , '%');
 }
 
-TEST(LexerTestF, function_add)
+TEST(hand, function_add)
 {
   std::stringstream ss;
   ss << "fn sum(i64 a, i64 b) return a+b";
@@ -192,7 +192,7 @@ TEST(LexerTestF, function_add)
   EXPECT_EQ(res.getIdentifierString(5), "return");
 }
 
-TEST(LexerTestF, error)
+TEST(hand, error)
 {
   std::stringstream ss;
   ss << "0..1";

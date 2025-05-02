@@ -1,3 +1,5 @@
+#include "stream.hpp"
+
 #include <cstdlib>
 #include <cctype>
 #include <fstream>
@@ -6,6 +8,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+namespace lex {
 
 enum FSM_TRANS
 {
@@ -97,8 +101,7 @@ struct machine_t {
 
 machine_t stateTable;
 
-#if 0
-int main(int argc, char * argv[])
+int fsm_lex(stream_t & in)
 {
   stateTable.resize(S_SIZE, C_SIZE);
   stateTable.fill(S_REJECT);
@@ -149,18 +152,11 @@ int main(int argc, char * argv[])
   stateTable(S_SUB   , C_EQUAL) = S_SUB_EQ;
   
   // declare variables
-  std::ifstream infile;
   std::string expression = "";
   std::vector<TokenType> tokens;
 
   // get data from user
-  infile.open(argv[1]);
-
-  if(infile.fail())
-  {
-    std::cout<<"\n** ERROR - the file \""<<argv[1]<<"\" cannot be found!\n\n";
-    exit(1);
-  }
+  auto & infile = in.in;
 
   // use a loop to scan each line in the file
   while(getline(infile, expression))
@@ -179,12 +175,9 @@ int main(int argc, char * argv[])
       }
   }
 
-  infile.close();
-
   return 0;
 }// end of main
 
-#endif
 
 /**
 * FUNCTION: Lexer
@@ -333,4 +326,6 @@ std::string GetLexemeName(int lexeme)
     case S_REJECT:return "REJECT";
     default:      return "ERROR";
   }
-}// http://programmingnotes.org/
+}
+
+} // namespace
