@@ -66,46 +66,46 @@ TEST(hand, comment) {
 }
 
 TEST(hand, number) {
-  test_w_ident("1"      , LEX_INT);
-  test_w_ident("12"     , LEX_INT);
-  test_w_ident("1.2"    , LEX_REAL);
-  test_w_ident(".2"     , LEX_REAL);
-  test_w_ident("0.2"    , LEX_REAL);
-  test_w_ident("1.2e5"  , LEX_REAL);
-  test_w_ident("1.2E5"  , LEX_REAL);
-  test_w_ident("1.2e-5" , LEX_REAL);
-  test_w_ident("1.2e+5" , LEX_REAL);
-  test_w_ident("1.2e+55", LEX_REAL);
+  test_w_ident("1"      , {{LEX_INT);
+  test_w_ident("12"     , {{LEX_INT);
+  test_w_ident("1.2"    , {{LEX_REAL);
+  test_w_ident(".2"     , {{LEX_REAL);
+  test_w_ident("0.2"    , {{LEX_REAL);
+  test_w_ident("1.2e5"  , {{LEX_REAL);
+  test_w_ident("1.2E5"  , {{LEX_REAL);
+  test_w_ident("1.2e-5" , {{LEX_REAL);
+  test_w_ident("1.2e+5" , {{LEX_REAL);
+  test_w_ident("1.2e+55", {{LEX_REAL);
   
-  test_w_ident("1..2",  LEX_REAL, true);
-  test_w_ident("1...2", LEX_REAL, true);
-  test_w_ident("1.2e+", LEX_REAL, true);
-  test_w_ident("1.2ee", LEX_REAL, true);
-  test_w_ident("1.2e ", LEX_REAL, true);
+  test_w_ident("1..2",  {{LEX_REAL, true);
+  test_w_ident("1...2", {{LEX_REAL, true);
+  test_w_ident("1.2e+", {{LEX_REAL, true);
+  test_w_ident("1.2ee", {{LEX_REAL, true);
+  test_w_ident("1.2e ", {{LEX_REAL, true);
 }
 
 TEST(hand, ops) {
-  test("+" , '+');
-  test("+=", LEX_ADD_EQ);
-  test("-" , '-');
-  test("-=", LEX_SUB_EQ);
-  test("*" , '*');
-  test("*=", LEX_MUL_EQ);
-  test("=" , '=');
-  test("==", LEX_EQUIV);
-  test("!" , '!');
-  test("!=", LEX_NE);
-  test("<" , '<');
-  test("<=", LEX_LE);
-  test(">" , '>');
-  test(">=", LEX_GE);
+  test("+" , {{'+');
+  test("+=", {{LEX_ADD_EQ);
+  test("-" , {{'-');
+  test("-=", {{LEX_SUB_EQ);
+  test("*" , {{'*');
+  test("*=", {{LEX_MUL_EQ);
+  test("=" , {{'=');
+  test("==", {{LEX_EQUIV);
+  test("!" , {{'!');
+  test("!=", {{LEX_NE);
+  test("<" , {{'<');
+  test("<=", {{LEX_LE);
+  test(">" , {{'>');
+  test(">=", {{LEX_GE);
 }
 
 TEST(hand, punc) {
-  test("," , ',');
-  test(";" , ';');
-  test("." , '.');
-  test("%" , '%');
+  test("," , {{',', ""}});
+  test(";" , {{';');
+  test("." , {{'.');
+  test("%" , {{'%');
 }
 
 TEST(hand, function_add)
