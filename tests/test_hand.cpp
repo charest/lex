@@ -103,9 +103,9 @@ TEST(hand, ops) {
 
 TEST(hand, punc) {
   test("," , {{',', ""}});
-  test(";" , {{';');
-  test("." , {{'.');
-  test("%" , {{'%');
+  test(";" , {{';', ""}});
+  test("." , {{'.', ""}});
+  test("%" , {{'%', ""}});
 }
 
 TEST(hand, function_add)
