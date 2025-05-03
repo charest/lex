@@ -22,9 +22,20 @@ TEST(fsm, number)
   test("0120", {{S_OCTAL, "0120"}});
   test("0x120", {{S_HEX, "0x120"}});
   test("0X120", {{S_HEX, "0X120"}});
+
+  test("1.2.3", {{S_UNK, "1.2.3"}}, true);
+  test("0120x12", {{S_UNK, "0120x12"}}, true);
+  test("1x14", {{S_UNK, "1x14"}}, true);
 }
 
 TEST(fsm, symbol)
 {
   test("=", {{'=', ""}});
+  test("==", {{S_EQUIV, ""}});
+  test("+", {{'+', ""}});
+  test("+=", {{S_ADD_EQ, ""}});
+  test("++", {{S_INC, ""}});
+  test("-", {{'-', ""}});
+  test("-=", {{S_SUB_EQ, ""}});
+  test("--", {{S_DEC, ""}});
 }
