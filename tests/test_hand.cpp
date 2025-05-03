@@ -98,8 +98,8 @@ void test_w_ident(
 //=============================================================================
 
 TEST(hand, ident) {
-  test_w_ident("ident", LEX_IDENT);
-  test_w_ident("id1ent", LEX_IDENT);
+  test_w_ident("ident", {{LEX_IDENT, "ident"}});
+  test_w_ident("id1ent", {{LEX_IDENT, "id1ent"}});
   test_w_ident("1ident", {{LEX_INT, "1"}, {LEX_IDENT, "ident"}});
 }
 
