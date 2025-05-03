@@ -7,54 +7,6 @@
 using namespace lex;
 using testing::ElementsAre;
 
-//---------------------------------------------------------------------------
-void test(const std::string & ans, int ans_tok, bool isBad=false)
-{
-  std::cout << "Testing: " << ans << std::endl;
-
-  std::stringstream ss(ans);
-  stream_t is(ss);
-  lexed_t res;
-  auto err = hand_lex(is, res);
-  
-  if (!isBad) EXPECT_EQ(res.numTokens(), 2);
-  auto tok = res.tokens[0];
-  if (!isBad) EXPECT_EQ(tok, ans_tok);
-  if (!isBad) EXPECT_EQ(res.tokens[1], LEX_EOF);
-  std::cout << "... Expected: " << lex_to_str(tok);
-  std::cout << " Got: " << lex_to_str(tok) << std::endl;
-  
-  if (isBad) ASSERT_TRUE(err);
-  else       ASSERT_FALSE(err);
-}
-
-
-//---------------------------------------------------------------------------
-void test_w_ident(const std::string & ans, int ans_tok, bool isBad=false)
-{
-  std::cout << "Testing: " << ans << std::endl;
-
-  std::stringstream ss(ans);
-  stream_t is(ss);
-  lexed_t res;
-  auto err = hand_lex(is, res);
-  
-  if (!isBad) EXPECT_EQ(res.numTokens(), 2);
-  auto tok = res.tokens[0];
-  if (!isBad) EXPECT_EQ(tok, ans_tok);
-  if (!isBad) EXPECT_EQ(res.tokens[1], LEX_EOF);
-  std::cout << "... Expected: " << lex_to_str(tok);
-  std::cout << " Got: " << lex_to_str(tok) << std::endl;
-  
-  if (!isBad) EXPECT_EQ(res.numIdentifiers(), 1);
-  auto id = res.findIdentifier(0);
-  auto str = res.getIdentifierString(id);
-  std::cout << "... Ident: " << str << std::endl;
-
-  EXPECT_EQ(str, ans);
-  if (isBad) ASSERT_TRUE(err);
-  else       ASSERT_FALSE(err);
-}
 
 //---------------------------------------------------------------------------
 void test_w_ident(
@@ -70,19 +22,19 @@ void test_w_ident(
   auto err = hand_lex(is, res);
   
   auto nans = ans.size();
-  if (!isBad) EXPECT_EQ(res.numTokens(), nans+1);
-  if (!isBad) EXPECT_EQ(res.tokens.back(), LEX_EOF);
+  EXPECT_EQ(res.numTokens(), nans+1);
+  EXPECT_EQ(res.tokens.back(), LEX_EOF);
   
   for (int i=0; i<nans; ++i) {
     auto exp_tok = ans[i].first;
     auto & exp_id = ans[i].second;
     auto tok = res.tokens[i];
-    if (!isBad) EXPECT_EQ(tok, exp_tok);
+    EXPECT_EQ(tok, exp_tok);
     std::cout << "... [" << i << "] Expected: " << lex_to_str(tok);
     std::cout << " Got: " << lex_to_str(tok) << std::endl;
     auto id = res.findIdentifier(i);
     auto str = res.getIdentifierString(id);
-    if (!isBad) EXPECT_EQ(str, exp_id);
+    EXPECT_EQ(str, exp_id);
     std::cout << "... [" << i << "] Expected: " << exp_id;
     std::cout << " Got: " << str << std::endl;
   }
