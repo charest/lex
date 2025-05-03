@@ -11,4 +11,20 @@
 
 TEST(fsm, ident)
 {
+  test("ident", {{S_IDENT, "ident"}});
+}
+
+TEST(fsm, number)
+{
+  test("123", {{S_INT, "123"}});
+  test("1.23", {{S_REAL, "1.23"}});
+  test("0", {{S_INT, "0"}});
+  test("0120", {{S_OCTAL, "0120"}});
+  test("0x120", {{S_HEX, "0x120"}});
+  test("0X120", {{S_HEX, "0X120"}});
+}
+
+TEST(fsm, symbol)
+{
+  test("=", {{'=', ""}});
 }
