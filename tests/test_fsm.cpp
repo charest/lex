@@ -1,6 +1,17 @@
+#include <lex.hpp>
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include "test.hpp"
+  
+using namespace lex;
+using testing::ElementsAre;
+
+static void test(
+  const std::string & inp,
+  const std::vector<std::pair<int, std::string>> & ans,
+  bool isBad=false)
+{
+  test_harness<fsm_lex>(inp, ans, isBad);
+}
 
 //ident 123
 //1.23 1.2.3

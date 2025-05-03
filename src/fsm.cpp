@@ -1,4 +1,5 @@
 #include "stream.hpp"
+#include "lex.hpp"
 
 #include <cstdlib>
 #include <cctype>
@@ -9,69 +10,40 @@
 #include <string>
 #include <vector>
 
+#define FOR_FSM_CLASSES(DO) \
+  DO( C_WHITE,   "WHITE")   /* space, tab */ \
+  DO( C_CR,      "CR") \
+  DO( C_LF,      "LF") \
+  DO( C_EQUABLE, "EQUABLE") /*   ^ !     */         \
+  DO( C_EQUAL,   "EQUAL")   /*   = \     */         \
+  DO( C_ALPHA,   "ALPHA")   /*   a-zA-Z_ */         \
+  DO( C_X,       "X")       /*   x X     */         \
+  DO( C_ZERO,    "ZERO")    /*   0       */         \
+  DO( C_DIGIT,   "DIGIT")   /*   0-9     */         \
+  DO( C_PLUS,    "PLUS")    /*   +       */         \
+  DO( C_AND,     "AND")     /*   &       */         \
+  DO( C_OR,      "OR")      /*   |       */         \
+  DO( C_HASH,    "HASH")    /*   #       */         \
+  DO( C_DASH,    "DASH")    /*   -       */         \
+  DO( C_GREAT,   "GREAT")   /*   >       */         \
+  DO( C_LESS,    "LESS")    /*   <       */         \
+  DO( C_SLASH,   "SLASH")   /*   /       */         \
+  DO( C_STAR,    "STAR")    /*   *       */         \
+  DO( C_MISC,    "MISC")    /* all other symbols */ \
+  DO( C_DOT,     "DOT")     /*   .       */         \
+  DO( C_SQUOTE,  "SQUOTE")  /*   '       */         \
+  DO( C_DQUOTE,  "DQUOTE")  /*   "       */         \
+  DO( C_EOF, "")
+
 namespace lex {
 
-enum FSM_TRANS
-{
-  S_REJECT,
-  S_INT,
-  S_REAL,
-  S_ZERO,
-  S_OCTAL,
-  S_HEX,
-  S_IDENT,
-  S_EQUAL,
-  S_EQUIV,
-  S_ADD,
-  S_ADD_EQ,
-  S_INC,
-  S_SUB,
-  S_SUB_EQ,
-  S_DEC,
-  S_OP,
-  S_SPACE,
-  S_UNK,
-  S_SIZE
-};
 enum FSM_CLASS
 {
-  C_WHITE,   // space, tab
-  C_CR,
-  C_LF,
-  C_EQUABLE, // ^ !
-  C_EQUAL,   // =
-  C_ALPHA,   // a-zA-Z_
-  C_X,       // x X
-  C_ZERO,    // 0
-  C_DIGIT,   // 0-9
-  C_PLUS,    // +
-  C_AND,     // &
-  C_OR,      // |
-  C_HASH,    // #
-  C_DASH,    // -
-  C_GREATER, // >
-  C_LESS,    // <
-  C_SLASH,   // /
-  C_STAR,    // *
-  C_MISC,    // all other symbols
-  C_DOT,  // .
-  C_SQUOTE,  // '
-  C_DQUOTE,  // "
-  C_EOF,
+#define DEFINE_TOKS(name, str, ...) name,
+  FOR_FSM_CLASSES(DEFINE_TOKS)
+#undef DEFINE_TOKS
   C_SIZE
 };
-// struct to hold token information
-struct TokenType
-{
-    std::string token;
-    int lexeme;
-    std::string lexemeName;
-};
-
-// function prototypes
-std::vector<TokenType> Lexer(std::string expression);
-int Get_FSM_Col(char currentChar);
-std::string GetLexemeName(int lexeme);
 
 struct machine_t {
   int rows = 0, cols = 0;
@@ -101,9 +73,137 @@ struct machine_t {
 
 machine_t stateTable;
 
-int fsm_lex(stream_t & in)
+
+
+/**
+* FUNCTION: Get_FSM_Col
+* USE: Determines the state of the type of character being examined.
+* @param currentChar - A character.
+* @return - Returns the state of the type of character being examined.
+*/
+int Get_FSM_Col(char c)
 {
-  stateTable.resize(S_SIZE, C_SIZE);
+  switch (c) {
+  case ('\r'): return C_CR;
+  case ('\n'): return C_LF;
+  case ('0'):  return C_ZERO;
+  case ('x'):  case ('X'): return C_X;
+  case ('_'):  return C_ALPHA;
+  case ('^'):  case ('!'): return C_EQUABLE;
+  case ('='):  return C_EQUAL;
+  case ('+'):  return C_PLUS;
+  case ('&'):  return C_AND;
+  case ('|'):  return C_OR;
+  case ('#'):  return C_HASH;
+  case ('-'):  return C_DASH;
+  case ('>'):  return C_GREAT;
+  case ('<'):  return C_LESS;
+  case ('/'):  return C_SLASH;
+  case ('*'):  return C_STAR;
+  case ('.'):  return C_DOT;
+  case ('\''):  return C_SQUOTE;
+  case ('"'):  return C_DQUOTE;
+  }
+
+  if (isspace(c)) return C_WHITE;
+  if (isdigit(c)) return C_DIGIT;
+  if (isalpha(c)) return C_ALPHA;
+  if (ispunct(c)) return C_MISC;
+  return S_UNK;
+}// end of Get_FSM_Col
+
+/**
+* FUNCTION: GetLexemeName
+* USE: Returns the string equivalent of an integer lexeme token type.
+* @param lexeme - An integer lexeme token type.
+* @return - An std::string string representing the name of the integer
+*        lexeme token type.
+*/
+std::string GetLexemeName(int lexeme)
+{
+  switch(lexeme)
+  {
+#define TOKS_CASE(name, str, ...) case name: return str;
+    FOR_FSM_STATES(TOKS_CASE)
+#undef TOKS_CASE
+    default:      return "ERROR";
+  }
+}
+
+/**
+* FUNCTION: Lexer
+* USE: Parses the "expression" string using the Finite State Machine to
+*     isolate each individual token and lexeme name in the expression.
+* @param expression - A std::string containing text.
+* @return - Returns a vector containing the tokens found in the string
+*/
+int Lexer(std::string expression, lexed_t lx)
+{
+    char currentChar = ' ';
+    int col = S_REJECT;
+    int currentState = S_REJECT;
+    int prevState = S_REJECT;
+    std::string currentToken = "";
+
+    // use an FSM to parse the expression
+    for(unsigned x = 0; x < expression.length();)
+    {
+        currentChar = expression[x];
+        //std:: cout << currentChar << " " << GetLexemeName(currentState) << " ";
+
+        // get the column number for the current character
+        col = Get_FSM_Col(currentChar);
+        //std:: cout << " col " << GetClassName(col) << std::endl;;
+
+        /* ========================================================
+
+            THIS IS WHERE WE CHECK THE FINITE STATE MACHINE TABLE
+               USING THE "col" VARIABLE FROM ABOVE ^
+
+          ========================================================= */
+
+        // get the current state of the expression
+        currentState = stateTable(currentState, col);
+        //std:: cout << " -> " << GetLexemeName(currentState) << std::endl;;
+
+        /* ===================================================
+
+          THIS IS WHERE WE CHECK FOR A SUCESSFUL PARSE
+           - If the current state of the expression == REJECT
+             (the starting state), then we have sucessfully parsed
+             a token.
+
+            - ELSE we continue trying to find a sucessful token
+
+            =================================================== */
+        if(currentState == S_REJECT)
+        {
+            if(prevState != S_SPACE) // we dont care about whitespace
+              lx.add(prevState, 0, currentToken);
+            currentToken = "";
+        }
+        else
+        {
+            currentToken += currentChar;
+            ++x;
+        }
+        prevState = currentState;
+
+    }
+    // this ensures the last token gets saved when
+    // we reach the end of the loop (if a valid token exists)
+    if(currentState != S_SPACE && currentToken != "")
+      // ^^ we dont care about whitespace
+      lx.add(currentState, 0, currentToken);
+    
+    return 0;
+}// end of Lexer
+
+
+
+int fsm_lex(stream_t & in, lexed_t & lx)
+{
+  stateTable.resize(FSM_NUM_STATES, C_SIZE);
   stateTable.fill(S_REJECT);
   
   stateTable(S_REJECT, C_WHITE) = S_SPACE;
@@ -153,179 +253,23 @@ int fsm_lex(stream_t & in)
   
   // declare variables
   std::string expression = "";
-  std::vector<TokenType> tokens;
 
   // get data from user
   auto & infile = in.in;
 
   // use a loop to scan each line in the file
-  while(getline(infile, expression))
+  while(!infile.eof())
   {
       // use the "Lexer" function to isolate integer, real, operator,
       // string, and unknown tokens
-      tokens = Lexer(expression);
+      auto err = Lexer(expression, lx);
 
-      // display the tokens to the screen
-      for(unsigned x = 0; x < tokens.size(); ++x)
-      {
-        std::stringstream ss;
-        ss << "\"" << tokens[x].token << "\"";
-        std::cout << std::setw(8) << std::left << tokens[x].lexemeName;
-        std::cout << std::setw(10) << ss.str() << std::endl;
-      }
   }
+
+  lx.tokens.push_back( LEX_EOF );
 
   return 0;
 }// end of main
 
-
-/**
-* FUNCTION: Lexer
-* USE: Parses the "expression" string using the Finite State Machine to
-*     isolate each individual token and lexeme name in the expression.
-* @param expression - A std::string containing text.
-* @return - Returns a vector containing the tokens found in the string
-*/
-std::vector<TokenType> Lexer(std::string expression)
-{
-    TokenType access;
-    std::vector<TokenType> tokens;
-    char currentChar = ' ';
-    int col = S_REJECT;
-    int currentState = S_REJECT;
-    int prevState = S_REJECT;
-    std::string currentToken = "";
-
-    // use an FSM to parse the expression
-    for(unsigned x = 0; x < expression.length();)
-    {
-        currentChar = expression[x];
-        //std:: cout << currentChar << " " << GetLexemeName(currentState) << " ";
-
-        // get the column number for the current character
-        col = Get_FSM_Col(currentChar);
-        //std:: cout << " col " << GetClassName(col) << std::endl;;
-
-        /* ========================================================
-
-            THIS IS WHERE WE CHECK THE FINITE STATE MACHINE TABLE
-               USING THE "col" VARIABLE FROM ABOVE ^
-
-          ========================================================= */
-
-        // get the current state of the expression
-        currentState = stateTable(currentState, col);
-        //std:: cout << " -> " << GetLexemeName(currentState) << std::endl;;
-
-        /* ===================================================
-
-          THIS IS WHERE WE CHECK FOR A SUCESSFUL PARSE
-           - If the current state of the expression == REJECT
-             (the starting state), then we have sucessfully parsed
-             a token.
-
-            - ELSE we continue trying to find a sucessful token
-
-            =================================================== */
-        if(currentState == S_REJECT)
-        {
-            if(prevState != S_SPACE) // we dont care about whitespace
-            {
-                access.token = currentToken;
-                access.lexeme = prevState;
-                access.lexemeName = GetLexemeName(access.lexeme);
-                tokens.push_back(access);
-            }
-            currentToken = "";
-        }
-        else
-        {
-            currentToken += currentChar;
-            ++x;
-        }
-        prevState = currentState;
-
-    }
-    // this ensures the last token gets saved when
-    // we reach the end of the loop (if a valid token exists)
-    if(currentState != S_SPACE && currentToken != "")
-    {// ^^ we dont care about whitespace
-        access.token = currentToken;
-        access.lexeme = currentState;
-        access.lexemeName = GetLexemeName(access.lexeme);
-        tokens.push_back(access);
-    }
-    return tokens;
-}// end of Lexer
-
-/**
-* FUNCTION: Get_FSM_Col
-* USE: Determines the state of the type of character being examined.
-* @param currentChar - A character.
-* @return - Returns the state of the type of character being examined.
-*/
-int Get_FSM_Col(char c)
-{
-  switch (c) {
-  case ('\r'): return C_CR;
-  case ('\n'): return C_LF;
-  case ('0'):  return C_ZERO;
-  case ('x'):  case ('X'): return C_X;
-  case ('_'):  return C_ALPHA;
-  case ('^'):  case ('!'): return C_EQUABLE;
-  case ('='):  return C_EQUAL;
-  case ('+'):  return C_PLUS;
-  case ('&'):  return C_AND;
-  case ('|'):  return C_OR;
-  case ('#'):  return C_HASH;
-  case ('-'):  return C_DASH;
-  case ('>'):  return C_GREATER;
-  case ('<'):  return C_LESS;
-  case ('/'):  return C_SLASH;
-  case ('*'):  return C_STAR;
-  case ('.'):  return C_DOT;
-  case ('\''):  return C_SQUOTE;
-  case ('"'):  return C_DQUOTE;
-  }
-
-  if (isspace(c)) return C_WHITE;
-  if (isdigit(c)) return C_DIGIT;
-  if (isalpha(c)) return C_ALPHA;
-  if (ispunct(c)) return C_MISC;
-  return S_UNK;
-}// end of Get_FSM_Col
-
-/**
-* FUNCTION: GetLexemeName
-* USE: Returns the string equivalent of an integer lexeme token type.
-* @param lexeme - An integer lexeme token type.
-* @return - An std::string string representing the name of the integer
-*        lexeme token type.
-*/
-std::string GetLexemeName(int lexeme)
-{
-  switch(lexeme)
-  {
-    case S_INT:   return "INT";
-    case S_REAL:  return "REAL";
-    case S_ZERO:  return "ZERO";
-    case S_OCTAL: return "OCTAL";
-    case S_HEX:   return "HEX";
-    case S_IDENT: return "IDENT";
-    case S_EQUAL: return "EQUAL";
-    case S_EQUIV: return "EQUIV";
-    case S_ADD:   return "ADD";
-    case S_ADD_EQ:return "ADD_EQ";
-    case S_INC:   return "INC";
-    case S_SUB:   return "SUB";
-    case S_SUB_EQ:return "SUB_EQ";
-    case S_DEC:   return "DEC";
-    case S_OP:    return "OP";
-    case S_SPACE: return "SPACE";
-    case S_UNK:   return "UNK";
-    case S_REJECT:return "REJECT";
-    default:      return "ERROR";
-  }
-}
 
 } // namespace
