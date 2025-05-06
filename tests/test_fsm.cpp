@@ -160,10 +160,10 @@ TEST(fsm, symbol)
   test("/=", {{LEX_DIV_EQ, ""}});
   test("!" , {{'!',        ""}});
   test("!=", {{LEX_NE,     ""}});
-  //test("<" , {{'<',        ""}});
-  //test("<=", {{LEX_LE,     ""}});
-  //test(">" , {{'>',        ""}});
-  //test(">=", {{LEX_GE,     ""}});
+  test("<" , {{'<',        ""}});
+  test("<=", {{LEX_LE,     ""}});
+  test(">" , {{'>',        ""}});
+  test(">=", {{LEX_GE,     ""}});
 }
 
 TEST(fsm, punc) {
