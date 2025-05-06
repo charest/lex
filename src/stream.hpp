@@ -19,8 +19,8 @@ struct stream_t {
   std::istream & in;
   std::string name;
 
-  stream_t(std::istream & s, const std::string & name="")
-    : in(s) {}
+  stream_t(std::istream & s, const std::string & nm="")
+    : in(s), name(nm) {}
 
 
 };

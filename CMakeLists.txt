@@ -36,6 +36,8 @@ if (BUILD_TESTING)
     GTest::gmock_main
   )
 
+  target_compile_definitions(test_lex PUBLIC TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/")
+
   target_include_directories(test_lex PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
    
   add_subdirectory(tests)

@@ -10,7 +10,7 @@
 namespace lex {
   
 /// Get an identifier string
-std::string_view lexed_t::getIdentifierString(int i) const
+std::string lexed_t::getIdentifierString(int i) const
 { 
   if (i<0 || i >= identifiers.size()) return {};
   return identifiers[i];

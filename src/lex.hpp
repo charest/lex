@@ -15,36 +15,21 @@
   DO( LEX_REAL,   "REAL") \
   DO( LEX_COMMENT,"COMMENT") \
   DO( LEX_QUOTED, "QUOTED") \
-  DO( LEX_ADD_EQ, "ADD_EQ") \
-  DO( LEX_SUB_EQ, "SUB_EQ") \
-  DO( LEX_MUL_EQ, "MUL_EQ") \
-  DO( LEX_DIV_EQ, "DIV_EQ") \
-  DO( LEX_EQUIV,  "EQUIV") \
-  DO( LEX_NE,     "NE") \
-  DO( LEX_GE,     "GE") \
-  DO( LEX_LE,     "LE") \
+  DO( LEX_ADD_EQ, "+=") \
+  DO( LEX_SUB_EQ, "-=") \
+  DO( LEX_MUL_EQ, "*=") \
+  DO( LEX_DIV_EQ, "/=") \
+  DO( LEX_EQUIV,  "==") \
+  DO( LEX_NE,     "!=") \
+  DO( LEX_GE,     ">=") \
+  DO( LEX_LE,     "<=") \
+  DO( LEX_XOR_EQ, "^=") \
+  DO( LEX_OCTAL,  "OCTAL" ) \
+  DO( LEX_HEX,    "HEX" ) \
+  DO( LEX_INC,    "++" ) \
+  DO( LEX_DEC,    "--" ) \
   DO( LEX_UNK,    "UNK") \
   DO( LEX_EOF,    "EOF")
-
-#define FOR_FSM_STATES(DO) \
-  DO( S_REJECT, "REJECT" ) \
-  DO( S_INT, "INT_LIT" ) \
-  DO( S_REAL, "REAL_LIT" ) \
-  DO( S_ZERO, "ZERO" ) \
-  DO( S_OCTAL, "OCTAL" ) \
-  DO( S_HEX, "HEX" ) \
-  DO( S_IDENT, "IDENT" ) \
-  DO( S_EQUAL, "EQUAL" ) \
-  DO( S_EQUIV, "EQUIV" ) \
-  DO( S_ADD, "ADD" ) \
-  DO( S_ADD_EQ, "ADD_EQ" ) \
-  DO( S_INC, "INC" ) \
-  DO( S_SUB, "SUB" ) \
-  DO( S_SUB_EQ, "SUB_EQ" ) \
-  DO( S_DEC, "DEC" ) \
-  DO( S_OP, "OP" ) \
-  DO( S_SPACE, "SPACE" ) \
-  DO( S_UNK, "UNKNOWN" ) 
 
 namespace lex {
 
@@ -52,17 +37,10 @@ struct stream_t;
 struct stream_pos_t;
 
 enum LexToks {
-  _TOKS_START_  = 255,
+  _LEX_STATE_START_  = 255,
 #define DEFINE_TOKS(name, str, ...) name,
   FOR_LEX_STATES(DEFINE_TOKS)
 #undef DEFINE_TOKS
-};
-
-enum FsmToks {
-#define DEFINE_TOKS(name, str, ...) name,
-  FOR_FSM_STATES(DEFINE_TOKS)
-#undef DEFINE_TOKS
-  FSM_NUM_STATES
 };
 
 static std::string lex_to_str(int tok)
@@ -82,25 +60,62 @@ static std::string lex_to_str(int tok)
 struct lexed_t {
   std::vector<int> tokens;
   std::vector<stream_pos_t> token_pos;
+  std::vector<std::ios::pos_type> line_start;
 
   std::unordered_map<std::string, int> identifier_map;
-  std::vector<std::string_view> identifiers;
+  std::vector<std::string> identifiers;
   std::unordered_map<int, int> token_to_identifier;
 
   void add(int tok, stream_pos_t pos, const std::string & str = "");
+
+  void line(std::ios::pos_type p) { line_start.push_back(p); }
+
+  void lines( std::vector<std::ios::pos_type> & p)
+  { line_start.insert( line_start.end(), p.begin(), p.end() ); }
 
   size_t numTokens() const { return tokens.size(); }
   size_t numIdentifiers() const { return identifiers.size(); }
 
   int findIdentifier(int tok) const;
-  std::string_view getIdentifierString(int i) const;
+  std::string getIdentifierString(int i) const;
 };
+
+//==============================================================================
+/// The state machine datatype
+//==============================================================================
+struct machine_t {
+  int rows = 0, cols = 0;
+  std::vector<int> table;
+  
+  void resize(int nstate, int nclass)
+  {
+    rows = nstate;
+    cols = nclass;
+    table.resize(nstate*nclass);
+  }
+  void fill(int v)
+  { std::fill(table.begin(), table.end(), v); }
+
+  auto operator()(int s, int c) const
+  { return table[s*cols + c]; }
+  
+  auto & operator()(int s, int c)
+  { return table[s*cols + c]; }
+  
+  void setRow(int r, int s)
+  {
+    for (int c=0; c<cols; ++c)
+      table[r*cols + c] = s;
+  }
+};
+
 
 /// Main lexer function
 int hand_lex(stream_t & stream, lexed_t & lx);
 
 /// Main lexer function
-int fsm_lex(stream_t & stream, lexed_t & lx);
+machine_t make_fsm_table();
+int fsm_lex(stream_t & stream, const machine_t & table, lexed_t & lx);
   
 /// Dump lexer results
 void print(std::ostream& os, const lexed_t & res);

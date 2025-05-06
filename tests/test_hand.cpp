@@ -1,18 +1,88 @@
 #include <lex.hpp>
 
-#include "test.hpp"
+#include <stream.hpp>
+
+#include <chrono>
+
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
   
 using namespace lex;
 using testing::ElementsAre;
 
+//---------------------------------------------------------------------------
+static std::pair<lexed_t,int> test(const std::string & inp)
+{
+  std::stringstream ss(inp);
+  stream_t is(ss);
+  lexed_t res;
+  auto err = hand_lex(is, res);
+  print(std::cout, res);
+
+  return {res, err};
+}
+
+//---------------------------------------------------------------------------
 static void test(
   const std::string & inp,
   const std::vector<std::pair<int, std::string>> & ans,
   bool isBad=false)
 {
-  test_harness<hand_lex>(inp, ans, isBad);
+  using namespace lex;
+
+  std::cout << "Testing: " << inp << std::endl;
+
+  auto [res, err] = test(inp);
+  
+  auto nans = ans.size();
+  EXPECT_EQ(res.numTokens(), nans);
+  
+  for (int i=0; i<nans; ++i) {
+    auto exp_tok = ans[i].first;
+    auto & exp_id = ans[i].second;
+    auto tok = res.tokens[i];
+    EXPECT_EQ(tok, exp_tok);
+    std::cout << "... [" << i << "] Expected: " << lex_to_str(tok);
+    std::cout << " Got: " << lex_to_str(tok) << std::endl;
+    auto id = res.findIdentifier(i);
+    auto str = res.getIdentifierString(id);
+    EXPECT_EQ(str, exp_id);
+    std::cout << "... [" << i << "] Expected: " << exp_id;
+    std::cout << " Got: " << str << std::endl;
+  }
+
+  if (isBad) ASSERT_TRUE(err);
+  else       ASSERT_FALSE(err);
 }
 
+//---------------------------------------------------------------------------
+static void test_file(const std::string & inname)
+{
+  std::cout << "Processing: " << inname << std::endl;
+
+  auto start = std::chrono::high_resolution_clock::now();
+
+  std::ifstream infile(inname);
+  stream_t is(infile, inname);
+  lexed_t res;
+  auto err = hand_lex(is, res);
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> duration = end - start;
+
+  std::cout << "Elapsed: " << duration.count() << " ms" << std::endl;
+  std::cout << "Tokens: " << res.numTokens() << std::endl;
+  std::cout << "Lines: " << res.line_start.size() << std::endl;
+  
+  std::string name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+  std::string case_name = ::testing::UnitTest::GetInstance()->current_test_info()->test_case_name();
+  std::string outname = case_name + "." + name + ".txt";
+
+  std::cout << "Writing To: " << outname << std::endl;
+  std::ofstream out(outname);
+  print(out, res);
+}
+ 
 //=============================================================================
 // Individual tests
 //=============================================================================
@@ -53,20 +123,22 @@ TEST(hand, number) {
 }
 
 TEST(hand, ops) {
-  test("+" , {{'+', ""}});
+  test("+" , {{'+',        ""}});
   test("+=", {{LEX_ADD_EQ, ""}});
-  test("-" , {{'-', ""}});
+  test("-" , {{'-',        ""}});
   test("-=", {{LEX_SUB_EQ, ""}});
-  test("*" , {{'*', ""}});
+  test("*" , {{'*',        ""}});
   test("*=", {{LEX_MUL_EQ, ""}});
-  test("=" , {{'=', ""}});
-  test("==", {{LEX_EQUIV, ""}});
-  test("!" , {{'!', ""}});
-  test("!=", {{LEX_NE, ""}});
-  test("<" , {{'<', ""}});
-  test("<=", {{LEX_LE, ""}});
-  test(">" , {{'>', ""}});
-  test(">=", {{LEX_GE, ""}});
+  test("/" , {{'/',        ""}});
+  test("/=", {{LEX_DIV_EQ, ""}});
+  test("=" , {{'=',        ""}});
+  test("==", {{LEX_EQUIV,  ""}});
+  test("!" , {{'!',        ""}});
+  test("!=", {{LEX_NE,     ""}});
+  test("<" , {{'<',        ""}});
+  test("<=", {{LEX_LE,     ""}});
+  test(">" , {{'>',        ""}});
+  test(">=", {{LEX_GE,     ""}});
 }
 
 TEST(hand, punc) {
@@ -78,13 +150,9 @@ TEST(hand, punc) {
 
 TEST(hand, function_add)
 {
-  std::stringstream ss;
-  ss << "fn sum(i64 a, i64 b) return a+b";
-
-  stream_t is(ss);
-  lexed_t res;
-  auto err = hand_lex(is, res);
-  print(std::cout, res);
+  auto [res, err] = test("fn  sum(i64 a, i64 b) return a+b");
+  
+  ASSERT_FALSE(err);
   EXPECT_THAT( res.tokens, ElementsAre(
     LEX_IDENT,
     LEX_IDENT,
@@ -98,9 +166,7 @@ TEST(hand, function_add)
     LEX_IDENT,
     LEX_IDENT,
     '+',
-    LEX_IDENT,
-    LEX_EOF));
-  ASSERT_FALSE(err);
+    LEX_IDENT));
   
 
   EXPECT_EQ(res.numIdentifiers(), 6);
@@ -114,11 +180,33 @@ TEST(hand, function_add)
 
 TEST(hand, error)
 {
-  std::stringstream ss;
-  ss << "0..1";
- 
-  stream_t is(ss);
-  lexed_t res;
-  auto err = hand_lex(is, res);
+  auto [res, err] = test("0..1");
   ASSERT_TRUE(err);
 }
+
+
+TEST(hand, lines)
+{
+  auto [res, err] = test("0\n1");
+  ASSERT_EQ( res.line_start.size(), 1);
+  EXPECT_THAT( res.line_start, ElementsAre(2) );
+  ASSERT_FALSE(err);
+}
+
+TEST(hand, fake_10k)
+{
+  test_file(TEST_DIR "fake_program_10k.txt");
+}
+
+//#define BIGFILES
+#ifdef BIGFILES
+TEST(hand, fake_100k)
+{
+  test_file(TEST_DIR "fake_program_100k.txt");
+}
+
+TEST(hand, fake_1m)
+{
+  test_file(TEST_DIR "fake_program_1m.txt");
+}
+#endif
