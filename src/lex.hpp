@@ -62,9 +62,9 @@ struct lexed_t {
   std::vector<stream_pos_t> token_pos;
   std::vector<std::ios::pos_type> line_start;
 
-  std::unordered_map<std::string, int> identifier_map;
-  std::vector<std::string> identifiers;
-  std::unordered_map<int, int> token_to_identifier;
+  std::string identifier_data;
+  std::vector<int> identifier_offsets;
+  std::vector<int> identifier_tokens;
 
   void add(int tok, stream_pos_t pos, const std::string & str = "");
 
@@ -74,10 +74,10 @@ struct lexed_t {
   { line_start.insert( line_start.end(), p.begin(), p.end() ); }
 
   size_t numTokens() const { return tokens.size(); }
-  size_t numIdentifiers() const { return identifiers.size(); }
+  size_t numIdentifiers() const { return identifier_offsets.size(); }
 
   int findIdentifier(int tok) const;
-  std::string getIdentifierString(int i) const;
+  std::string_view getIdentifierString(int i) const;
 };
 
 //==============================================================================

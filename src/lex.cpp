@@ -10,17 +10,20 @@
 namespace lex {
   
 /// Get an identifier string
-std::string lexed_t::getIdentifierString(int i) const
+std::string_view lexed_t::getIdentifierString(int i) const
 { 
-  if (i<0 || i >= identifiers.size()) return {};
-  return identifiers[i];
+  if (i<0 || i >= identifier_offsets.size()) return {};
+  auto beg = i>0 ? identifier_offsets[i-1] : 0;
+  auto len = identifier_offsets[i] - beg;
+  return std::string_view(identifier_data).substr(beg, len);
 }
 
 /// Find an identifier from a token
 int lexed_t::findIdentifier(int tok) const
 {
-  auto it = token_to_identifier.find(tok);
-  if (it != token_to_identifier.end()) return it->second;
+  auto it = std::lower_bound(identifier_tokens.begin(), identifier_tokens.end(), tok);
+  if (it != identifier_tokens.end() && (*it == tok))
+    return std::distance(identifier_tokens.begin(), it);
   return -1;
 }
 
@@ -28,14 +31,13 @@ int lexed_t::findIdentifier(int tok) const
 void lexed_t::add(int token, stream_pos_t pos, const std::string & identifier)
 {
     if (identifier.size()) {
-      auto nidents = identifiers.size();
+      auto nidents = identifier_offsets.size();
       auto ntoks = tokens.size();
       // try to insert the identifier
-      auto res = identifier_map.try_emplace( identifier, nidents );
-      // if new, add it to the vector as well
-      if (res.second) identifiers.emplace_back( res.first->first );
+      identifier_data += identifier;
+      identifier_offsets.push_back(identifier_data.size());
       // add the token mapping
-      token_to_identifier[ntoks] = res.first->second;
+      identifier_tokens.push_back(ntoks);
     }
     tokens.push_back( token );
     token_pos.emplace_back( pos );

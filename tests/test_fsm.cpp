@@ -57,19 +57,28 @@ static void test(
 }
 
 //---------------------------------------------------------------------------
-static void test_file(const std::string & inname)
+static void test_file(const std::string & inname, bool do_out)
 {
   std::cout << "Processing: " << inname << std::endl;
   
   auto table = make_fsm_table();
 
-  auto start = std::chrono::high_resolution_clock::now();
 
+#define BUFF
+#ifdef BUFF
   std::ifstream infile(inname);
   stream_t is(infile, inname);
+#else
+  std::ifstream infile(inname);
+  auto inbuf = std::istreambuf_iterator<char>(infile.rdbuf());
+  std::string instr(inbuf, std::istreambuf_iterator<char>());
+  std::istringstream inss(instr);
+  stream_t is(inss, inname);
+#endif
+  
+  auto start = std::chrono::high_resolution_clock::now();
   lexed_t res;
   auto err = fsm_lex(is, table, res);
-
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = end - start;
 
@@ -81,9 +90,11 @@ static void test_file(const std::string & inname)
   std::string case_name = ::testing::UnitTest::GetInstance()->current_test_info()->test_case_name();
   std::string outname = case_name + "." + name + ".txt";
 
-  std::cout << "Writing To: " << outname << std::endl;
-  std::ofstream out(outname);
-  print(out, res);
+  if (do_out) {
+    std::cout << "Writing To: " << outname << std::endl;
+    std::ofstream out(outname);
+    print(out, res);
+  }
 }
 
 //=============================================================================
@@ -179,13 +190,16 @@ TEST(fsm, function_add)
   ASSERT_FALSE(err);
   
 
-  EXPECT_EQ(res.numIdentifiers(), 6);
+  EXPECT_EQ(res.numIdentifiers(), 9);
   EXPECT_EQ(res.getIdentifierString(0), "fn");
   EXPECT_EQ(res.getIdentifierString(1), "sum");
   EXPECT_EQ(res.getIdentifierString(2), "i64");
   EXPECT_EQ(res.getIdentifierString(3), "a");
-  EXPECT_EQ(res.getIdentifierString(4), "b");
-  EXPECT_EQ(res.getIdentifierString(5), "return");
+  EXPECT_EQ(res.getIdentifierString(4), "i64");
+  EXPECT_EQ(res.getIdentifierString(5), "b");
+  EXPECT_EQ(res.getIdentifierString(6), "return");
+  EXPECT_EQ(res.getIdentifierString(7), "a");
+  EXPECT_EQ(res.getIdentifierString(8), "b");
 }
 
 TEST(fsm, lines)
@@ -198,18 +212,18 @@ TEST(fsm, lines)
 
 TEST(fsm, fake_10k)
 {
-  test_file(TEST_DIR "fake_program_10k.txt");
+  test_file(TEST_DIR "fake_program_10k.txt", true);
 }
 
-//#define BIGFILES
+#define BIGFILES
 #ifdef BIGFILES
 TEST(fsm, fake_100k)
 {
-  test_file(TEST_DIR "fake_program_100k.txt");
+  test_file(TEST_DIR "fake_program_100k.txt", true);
 }
 
 TEST(fsm, fake_1m)
 {
-  test_file(TEST_DIR "fake_program_1m.txt");
+  test_file(TEST_DIR "fake_program_1m.txt", false);
 }
 #endif
