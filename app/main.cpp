@@ -78,6 +78,11 @@ int main(int argc, char* argv[]) {
   std::cout << "Processing: " << filename << std::endl;
 
   std::ifstream infile(filename);
+  if (!infile.good()) {
+    std::cerr << "File not found '" << filename << "'" << std::endl;
+    return 1;
+  }
+
   std::unique_ptr<stream_t> is;
   std::string bufstr;
   std::istringstream bufss;
