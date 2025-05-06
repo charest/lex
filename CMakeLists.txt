@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.10)
 
 project(LEX LANGUAGES CXX)
 
+# cmake module path
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
+include(BuildType)
+
 add_library(lex)
 add_subdirectory(src)
 
