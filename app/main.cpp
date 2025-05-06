@@ -20,7 +20,7 @@ FOR_LEXERS(LEXER_TOK)
 
 void print_usage(char* argv[]) {
   std::cerr << "Usage: " << argv[0] << " <input_file> <lexer_type: fsm|hand> ";
-  std::cerr << "[--output <file>] [--buffered]\n";
+  std::cerr << "[--output <file>] [--buffered] [--iters 5]\n";
 }
 
 bool valid_lexer(const std::string & ty)
@@ -54,14 +54,17 @@ int main(int argc, char* argv[]) {
   // Parse optional args
   std::string output_file;
   bool  buffered_io= false;
+  int niter = 1;
 
   for (int i = 3; i < argc; ++i) {
     std::string arg = argv[i];
-    if (arg == "--output" && i + 1 < argc) {
+    if (arg == "--output" && i + 1 < argc)
       output_file = argv[++i];
-    } else if (arg == "--buffered") {
+    else if (arg == "--iters" && i + 1 < argc)
+      niter = atoi(argv[++i]);
+    else if (arg == "--buffered")
       buffered_io = true;
-    } else if (arg == "--help" ) {
+    else if (arg == "--help" ) {
       print_usage(argv);
       return 0;
     } else {
@@ -91,35 +94,52 @@ int main(int argc, char* argv[]) {
   }
 
   // Process
+  auto table = make_fsm_table();
   auto start = std::chrono::high_resolution_clock::now();
-  lexed_t res;
+    
+  std::unique_ptr<lexed_t> res;
   int err = 0;
-  if (lexer_type == "hand") {
-    std::cout << "... Lexing via hand lexer ..." << std::endl;
-    err = hand_lex(*is, res);
-  }
-  else if (lexer_type == "fsm" ) {
-    std::cout << "... Lexing via FSM ..." << std::endl;
-    auto table = make_fsm_table();
-    err = fsm_lex(*is, table, res);
-  }
-  else {
-    std::cerr << "Unknown lexer type: '" << lexer_type << "'" << std::endl;
-    return -1;
+  double elapsed = 0;
+
+  for (int i=0; i<niter; ++i) {
+  
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    is->reset();
+    res = std::make_unique<lexed_t>();
+
+    if (lexer_type == "hand") {
+      std::cout << "... Lexing via hand lexer ... ";
+      err += hand_lex(*is, *res);
+    }
+    else if (lexer_type == "fsm" ) {
+      std::cout << "... Lexing via FSM ... ";
+      err += fsm_lex(*is, table, *res);
+    }
+    else {
+      std::cerr << "Unknown lexer type: '" << lexer_type << "'" << std::endl;
+      return -1;
+    }
+  
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    elapsed += duration.count();
+    std::cout << duration.count() << " ms" << std::endl;
+
   }
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> duration = end - start;
 
-  std::cout << "Elapsed: " << duration.count() << " ms" << std::endl;
-  std::cout << "Tokens: " << res.numTokens() << std::endl;
-  std::cout << "Lines: " << res.line_start.size() << std::endl;
+  std::cout << "Avg Elapsed: " << duration.count()/niter << " ms" << std::endl;
+  std::cout << "Tokens: " << res->numTokens() << std::endl;
+  std::cout << "Lines: " << res->line_start.size() << std::endl;
   
   // output
   if (output_file.size()) {
     std::cout << "Writing To: " << output_file << std::endl;
     std::ofstream out(output_file);
-    print(out, res);
+    print(out, *res);
   }
 
   return err;

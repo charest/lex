@@ -22,6 +22,11 @@ struct stream_t {
   stream_t(std::istream & s, const std::string & nm="")
     : in(s), name(nm) {}
 
+  void reset()
+  {
+    in.clear();
+    in.seekg( 0, std::ios::beg );
+  }
 
 };
 
