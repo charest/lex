@@ -11,6 +11,9 @@ namespace lex {
 //! count digits
 size_t count_digits(int i);
 
+//! string comparison
+bool differs(const std::string & a, const std::string & b);
+
 template<typename T = std::string>
 void printLeft(std::ostream & os, int width, char sep, const T & val = std::string())
 {

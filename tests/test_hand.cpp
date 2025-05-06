@@ -1,6 +1,6 @@
 #include <lex.hpp>
-
 #include <stream.hpp>
+#include <utils.hpp>
 
 #include <chrono>
 
@@ -56,21 +56,15 @@ static void test(
 }
 
 //---------------------------------------------------------------------------
-static void test_file(const std::string & inname, bool do_out)
+static void test_file(
+  const std::string & inname,
+  const std::string & gold = "",
+  bool do_out = false)
 {
   std::cout << "Processing: " << inname << std::endl;
 
-#define BUFF
-#ifdef BUFF
   std::ifstream infile(inname);
   stream_t is(infile, inname);
-#else
-  std::ifstream infile(inname);
-  auto inbuf = std::istreambuf_iterator<char>(infile.rdbuf());
-  std::string instr(inbuf, std::istreambuf_iterator<char>());
-  std::istringstream inss(instr);
-  stream_t is(inss, inname);
-#endif
 
   auto start = std::chrono::high_resolution_clock::now();
   lexed_t res;
@@ -82,15 +76,25 @@ static void test_file(const std::string & inname, bool do_out)
   std::cout << "Tokens: " << res.numTokens() << std::endl;
   std::cout << "Lines: " << res.line_start.size() << std::endl;
   
-  std::string name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-  std::string case_name = ::testing::UnitTest::GetInstance()->current_test_info()->test_case_name();
-  std::string outname = case_name + "." + name + ".txt";
+  if (gold.size()) {
+  
+    // output to gold file if requested
+    if (do_out) {
+      std::ofstream goldfile(gold);
+      std::cout << "Writing To: " << gold << std::endl;
+      print(goldfile, res);
+    }
+    // otherwise read it
+    else {
+      std::ifstream goldfile(gold);
+      auto buf = std::istreambuf_iterator<char>(goldfile.rdbuf());
+      std::string goldstr(buf, std::istreambuf_iterator<char>());
+      std::ostringstream out;
+      print(out, res);
+      EXPECT_FALSE(differs(goldstr, out.str()));
+    }
 
-  if (do_out) {
-    std::cout << "Writing To: " << outname << std::endl;
-    std::ofstream out(outname);
-    print(out, res);
-  }
+  } // gold
 }
  
 //=============================================================================
@@ -208,18 +212,8 @@ TEST(hand, lines)
 
 TEST(hand, fake_10k)
 {
-  test_file(TEST_DIR "fake_program_10k.txt", true);
+  test_file(
+    TEST_DIR "fake_program_10k.txt",
+    TEST_DIR "fake_program_10k.toks",
+    false);
 }
-
-#define BIGFILES
-#ifdef BIGFILES
-TEST(hand, fake_100k)
-{
-  test_file(TEST_DIR "fake_program_100k.txt", true);
-}
-
-TEST(hand, fake_1m)
-{
-  test_file(TEST_DIR "fake_program_1m.txt", false);
-}
-#endif

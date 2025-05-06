@@ -2,11 +2,12 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
+
+using pos_type = std::ios::pos_type;
 
 namespace lex {
 
-using pos_type = std::ios::pos_type;
-  
 std::string get_line(std::istream & in, pos_type lineStart)
 {
   in.seekg(lineStart);
@@ -74,6 +75,46 @@ int error(stream_t & is, const std::string & msg)
   in.seekg(currentPos);
   // seek to end if it was originally at the end
   if (is_eof) in.get();
+
+  return 1;
+}
+
+//==============================================================================
+/// dump out the current line
+//==============================================================================
+int error(stream_t & is, const std::string & msg, const std::vector<pos_type> & lines )
+{
+  auto & in = is.in;
+
+  // get current position
+  auto currentPos = in.tellg();
+
+  // check if we reached the end of file
+  auto is_eof = in.eof();
+  in.clear(); // in case we reached end of stream
+
+  // figure out the line start
+  auto nlines = lines.size();
+  auto lineStart = nlines ? lines.back() : std::ios::beg;
+  
+  // get the line
+  auto line = get_line(in, lineStart);
+
+  // output
+  if (is.name.size()) std::cerr << is.name << ":";
+  auto col = currentPos - lineStart;
+  std::cerr << nlines+1 << ":" << col << ": error: " << msg << std::endl;
+  std::cerr << line << std::endl;
+  std::cerr << std::string(col-1, ' ') << "^" << std::endl;
+
+  // seek to end if it was originally at the end
+  if (is_eof) {
+    in.seekg(0, std::ios::end);
+    in.get();
+  }
+  else {
+    in.seekg(currentPos);
+  }
 
   return 1;
 }
