@@ -40,7 +40,7 @@ ctest
 python3 ../tools/gen_random.py fake_program_10k.txt 10000
 ```
 
-### Run
+### Run Lexical Analysis
 ```bash
  ./lexit ../tests/fake_program_10k.txt fs --buffered --output test.txt
 ```
