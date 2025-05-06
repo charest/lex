@@ -9,25 +9,43 @@ def generate_fake_program(output_file, num_lines, tokens_per_line):
   operators = ['+', '-', '*', '/', '%', '=', '==', '!=', '<', '>', '<=', '>=', 'and', 'or', 'not']
   symbols = ['(', ')', '{', '}', '[', ']', ':', ',', '.', ';']
   identifiers = ['var' + str(i) for i in range(1000)]
-  numbers = [str(random.randint(0, 10000)) for _ in range(1000)]
+  ints = [str(random.randint(0, 10000)) for _ in range(1000)]
+  reals = [str(random.uniform(0, 10000)) for _ in range(1000)]
   
-  token_pool = keywords + operators + symbols + identifiers + numbers
+  TOKEN_TYPES = {
+    'keyword': (keywords, 1),
+    'operator': (operators, 1),
+    'symbol': (symbols, 1),
+    'ints': (ints, 1),
+    'reals': (reals, 1),
+    'identifier': (identifiers, 1)
+  }
+
+  def choose_weighted_token():
+    weighted_pool = []
+    for name, (tokens, weight) in TOKEN_TYPES.items():
+        weighted_pool.extend([tokens] * weight)
+    pool = random.choice(weighted_pool)
+    return random.choice(pool)
   
   # Function to generate a random line of tokens
   def generate_random_line():
-      return ' '.join(random.choice(token_pool) for _ in range(tokens_per_line)) + '\n'
+      return ' '.join(choose_weighted_token() for _ in range(tokens_per_line)) + '\n'
   
   # Write the fake program to file
-  with open(output_file, 'w') as f:
+  if output_file:
+    with open(output_file, 'w') as f:
+        for _ in range(num_lines):
+            f.write(generate_random_line()) 
+    print(f"File '{output_file}' created with {num_lines} lines.")
+  else:
       for _ in range(num_lines):
-          f.write(generate_random_line())
-  
-  print(f"File '{output_file}' created with {num_lines} lines.")
+          print(generate_random_line(), end="")
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a large fake code file with random tokens.")
-    parser.add_argument("output_file", help="Path to the output file (e.g., fake_program.txt)")
-    parser.add_argument("num_lines", type=int, help="Number of lines to generate")
+    parser.add_argument("--output_file", help="Path to the output file (e.g., fake_program.txt)")
+    parser.add_argument("--num_lines", type=int, help="Number of lines to generate", default=100)
     parser.add_argument("--tok_per_line", type=int, help="Number of tokens per line", default=10)
 
     args = parser.parse_args()
