@@ -17,6 +17,7 @@ int error(
   const std::string & msg,
   stream_pos_t pos);
 
+
 } // namespace 
 
 #endif // ERRORS_HPP

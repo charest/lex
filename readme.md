@@ -32,3 +32,15 @@ make
 ```bash
 ctest
 ```
+
+## 🏃 Run ```lexit```
+
+### Generate Fake Syntax
+```bash
+python3 ../tools/gen_random.py fake_program_10k.txt 10000
+```
+
+### Run
+```bash
+ ./lexit ../tests/fake_program_10k.txt fs --buffered --output test.txt
+```

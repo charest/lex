@@ -5,6 +5,11 @@ project(LEX LANGUAGES CXX)
 add_library(lex)
 add_subdirectory(src)
 
+add_executable(lexit)
+add_subdirectory(app)
+target_include_directories(lexit PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(lexit PRIVATE lex)
+
 #------------------------------------------------------------------------------#
 # Enable Regression Tests
 #------------------------------------------------------------------------------#
