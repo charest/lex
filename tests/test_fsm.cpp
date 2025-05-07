@@ -130,6 +130,16 @@ TEST(fsm, line)
   test("ident\nid", {{LEX_IDENT, "ident"}, {LEX_IDENT, "id"}});
 }
 
+TEST(fsm, quote) {
+  test("\"Quoted\"", {{LEX_QUOTED, "Quoted"}});
+  test("\"Quo\nted\"", {{LEX_QUOTED, "Quo\nted"}});
+}
+
+TEST(fsm, comment) {
+  test("# test", {{LEX_COMMENT, ""}});
+  test("# test\nident", {{LEX_COMMENT, ""}, {LEX_IDENT, "ident"}});
+}
+
 TEST(fsm, number)
 {
   test("123",   {{LEX_INT,   "123"}});
@@ -144,7 +154,7 @@ TEST(fsm, number)
   test("1x14",    {{LEX_UNK, "1x14"}}, true);
 }
 
-TEST(fsm, symbol)
+TEST(fsm, ops)
 {
   test("=",  {{'=',        ""}});
   test("==", {{LEX_EQUIV,  ""}});

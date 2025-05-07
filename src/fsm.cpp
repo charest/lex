@@ -12,9 +12,11 @@
 #include <vector>
 
 #define FOR_FSM_TRANS_STATES(DO) \
-  DO( S_REJECT, "REJECT"   ) \
-  DO( S_SPACE , "SPACE"    ) \
-  DO( S_NEWLINE, "NEWLINE" )
+  DO( S_REJECT     , "REJECT"      ) \
+  DO( S_SPACE      , "SPACE"       ) \
+  DO( S_NEWLINE    , "NEWLINE"     ) \
+  DO( S_SEEN_DQUOTE, "SEEN_DQUOTE" ) \
+  DO( S_SEEN_HASH  , "SEEN_HASH"   )
 
 #define FOR_FSM_FINAL_ID_STATES(DO) \
   DO( S_INT   , "INT_LIT"  , LEX_INT    ) \
@@ -25,6 +27,10 @@
   DO( S_IDENT , "IDENT"    , LEX_IDENT  ) \
   DO( S_EOF ,   "EOF"      , LEX_EOF    ) \
   DO( S_UNK ,   "UNK"      , LEX_UNK    )
+  
+#define FOR_FSM_OTHER_FINAL_STATES(DO) \
+  DO( S_QUOTED, "QUOTED"   , LEX_QUOTED ) \
+  DO( S_COMMENT, "COMMENT" , LEX_COMMENT )
 
 #define FOR_FSM_FINAL_OP_STATES(DO) \
   DO( S_DOT   , "DOT"      , '.'        ) \
@@ -51,6 +57,7 @@
 
 #define FOR_FSM_DECODE_STATES(DO) \
   DO( S_EQUABLE_EQ, "EQUABLE", "!=", LEX_NE, "^=", LEX_XOR_EQ )
+
 
 
 #define FOR_FSM_ONE_CHAR_CLASSES(DO) \
@@ -90,6 +97,7 @@ enum FSM_STATES {
 #define DEFINE_TOKS(name, str, ...) name,
   FOR_FSM_TRANS_STATES(DEFINE_TOKS)
   FOR_FSM_FINAL_ID_STATES(DEFINE_TOKS)
+  FOR_FSM_OTHER_FINAL_STATES(DEFINE_TOKS)
   FOR_FSM_FINAL_OP_STATES(DEFINE_TOKS)
   FOR_FSM_EXACT_STATES(DEFINE_TOKS)
   FOR_FSM_DECODE_STATES(DEFINE_TOKS)
@@ -114,6 +122,7 @@ std::string state_to_str(int tok)
 #define TOKS_CASE(name, str, ...) case name: return str;
   FOR_FSM_TRANS_STATES(TOKS_CASE)
   FOR_FSM_FINAL_ID_STATES(TOKS_CASE)
+  FOR_FSM_OTHER_FINAL_STATES(TOKS_CASE)
   FOR_FSM_FINAL_OP_STATES(TOKS_CASE)
   FOR_FSM_EXACT_STATES(TOKS_CASE)
   FOR_FSM_DECODE_STATES(TOKS_CASE)
@@ -232,6 +241,16 @@ machine_t make_fsm_table() {
   stateTable(S_REJECT, C_EQUABLE) = S_EQUABLE;
   stateTable(S_EQUABLE, C_EQUAL ) = S_EQUABLE_EQ;
   
+  stateTable(S_REJECT, C_DQUOTE) = S_SEEN_DQUOTE;
+  stateTable.setRow(S_SEEN_DQUOTE, S_SEEN_DQUOTE);
+  stateTable(S_SEEN_DQUOTE, C_DQUOTE) = S_QUOTED;
+  stateTable(S_SEEN_DQUOTE, C_EOF)    = S_REJECT;
+  
+  stateTable(S_REJECT, C_HASH) = S_SEEN_HASH;
+  stateTable.setRow(S_SEEN_HASH, S_SEEN_HASH);
+  stateTable(S_SEEN_HASH, C_LF)  = S_COMMENT;
+  stateTable(S_SEEN_HASH, C_EOF) = S_COMMENT;
+  
   stateTable.setRow(S_UNK, S_UNK);
   stateTable(S_UNK, C_WHITE) = S_REJECT;
   stateTable(S_UNK, C_EOF) = S_REJECT;
@@ -286,7 +305,7 @@ int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
     currToken.pop_back(); // last char is rejected
     stream_pos_t pos{begPos, prevPos};
     
-    if (prevState == S_UNK) err += error(in, "Unknown string.");
+    if (prevState == S_UNK) err += error(in, "Unknown string.", pos, lx.line_start);
 
     switch (prevState) {
 
@@ -301,6 +320,15 @@ int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
       #define STATE_CASE(name, str, lstate) case name: lx.add(lstate, pos); break;
       FOR_FSM_FINAL_OP_STATES(STATE_CASE)
       #undef STATE_CASE
+
+      case S_QUOTED:
+        lx.add(LEX_QUOTED, pos, currToken.substr(1, currToken.size()-2));
+        break;
+      
+      case S_COMMENT:
+        lx.add(LEX_COMMENT, pos);
+        break;
+
 
       case S_EQUABLE_EQ:
         lx.add( currToken[0] == '!' ? LEX_NE : LEX_XOR_EQ, pos );
