@@ -15,8 +15,7 @@
   DO( S_REJECT     , "REJECT"      ) \
   DO( S_SPACE      , "SPACE"       ) \
   DO( S_NEWLINE    , "NEWLINE"     ) \
-  DO( S_SEEN_DQUOTE, "SEEN_DQUOTE" ) \
-  DO( S_SEEN_HASH  , "SEEN_HASH"   )
+  DO( S_SEEN_DQUOTE, "SEEN_DQUOTE" )
 
 #define FOR_FSM_FINAL_ID_STATES(DO) \
   DO( S_INT   , "INT_LIT"  , LEX_INT    ) \
@@ -246,10 +245,10 @@ machine_t make_fsm_table() {
   stateTable(S_SEEN_DQUOTE, C_DQUOTE) = S_QUOTED;
   stateTable(S_SEEN_DQUOTE, C_EOF)    = S_REJECT;
   
-  stateTable(S_REJECT, C_HASH) = S_SEEN_HASH;
-  stateTable.setRow(S_SEEN_HASH, S_SEEN_HASH);
-  stateTable(S_SEEN_HASH, C_LF)  = S_COMMENT;
-  stateTable(S_SEEN_HASH, C_EOF) = S_COMMENT;
+  stateTable(S_REJECT, C_HASH) = S_COMMENT;
+  stateTable.setRow(S_COMMENT, S_COMMENT);
+  stateTable(S_COMMENT, C_LF)  = S_REJECT;
+  stateTable(S_COMMENT, C_EOF) = S_REJECT;
   
   stateTable.setRow(S_UNK, S_UNK);
   stateTable(S_UNK, C_WHITE) = S_REJECT;
