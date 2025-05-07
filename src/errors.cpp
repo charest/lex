@@ -82,7 +82,11 @@ int error(stream_t & is, const std::string & msg)
 //==============================================================================
 /// dump out the current line
 //==============================================================================
-int error(stream_t & is, const std::string & msg, const std::vector<pos_type> & lines )
+int error(
+  stream_t & is,
+  const std::string & msg,
+  const stream_pos_t & pos,
+  const std::vector<pos_type> & lines )
 {
   auto & in = is.in;
 
@@ -94,18 +98,27 @@ int error(stream_t & is, const std::string & msg, const std::vector<pos_type> & 
   in.clear(); // in case we reached end of stream
 
   // figure out the line start
-  auto nlines = lines.size();
-  auto lineStart = nlines ? lines.back() : std::ios::beg;
-  
+  pos_type lineStart = lineStart = std::ios::beg;
+  std::size_t lineNo = 0;
+
+  if (lines.size()) {
+    auto it = std::lower_bound(lines.begin(), lines.end(), pos.begin);
+    lineStart = (it != lines.end()) ? *it : lines.back();
+    lineNo = std::distance(lines.begin(), it);
+  }
+
   // get the line
   auto line = get_line(in, lineStart);
+  auto lineLen = line.size();
 
   // output
   if (is.name.size()) std::cerr << is.name << ":";
-  auto col = currentPos - lineStart;
-  std::cerr << nlines+1 << ":" << col << ": error: " << msg << std::endl;
+  auto colNo = pos.begin - lineStart;
+  auto width = pos.end - pos.begin;
+
+  std::cerr << lineNo+1 << ":" << colNo+1 << ": error: " << msg << std::endl;
   std::cerr << line << std::endl;
-  std::cerr << std::string(col-1, ' ') << "^" << std::endl;
+  std::cerr << std::string(colNo, ' ') << std::string(width, '^') << std::endl;
 
   // seek to end if it was originally at the end
   if (is_eof) {
@@ -115,7 +128,7 @@ int error(stream_t & is, const std::string & msg, const std::vector<pos_type> & 
   else {
     in.seekg(currentPos);
   }
-
+  
   return 1;
 }
 
