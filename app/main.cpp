@@ -10,7 +10,8 @@
 
 #define FOR_LEXERS(DO) \
   DO(HAND, "hand") \
-  DO(FSM,  "fsm")
+  DO(FSM,  "fsm") \
+  DO(RE2C, "re2c")
 
 enum Opts {
 #define LEXER_TOK(name, str) name,
@@ -120,6 +121,10 @@ int main(int argc, char* argv[]) {
     else if (lexer_type == "fsm" ) {
       std::cout << "... Lexing via FSM ... ";
       err += fsm_lex(*is, table, *res);
+    }
+    else if (lexer_type == "re2c" ) {
+      std::cout << "... Lexing via re2c ... ";
+      err += re2c_lex(*is, *res);
     }
     else {
       std::cerr << "Unknown lexer type: '" << lexer_type << "'" << std::endl;

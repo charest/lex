@@ -9,12 +9,16 @@
 #include <unordered_map>
 #include <vector>
 
-#define FOR_LEX_STATES(DO) \
+#define FOR_LEX_IDENT_STATES(DO) \
   DO( LEX_IDENT,  "IDENT") \
   DO( LEX_INT,    "INT") \
   DO( LEX_REAL,   "REAL") \
-  DO( LEX_COMMENT,"COMMENT") \
+  DO( LEX_OCTAL,  "OCTAL" ) \
+  DO( LEX_HEX,    "HEX" ) \
   DO( LEX_QUOTED, "QUOTED") \
+  DO( LEX_UNK,    "UNK")
+#define FOR_LEX_OTHER_STATES(DO) \
+  DO( LEX_COMMENT,"COMMENT") \
   DO( LEX_ADD_EQ, "+=") \
   DO( LEX_SUB_EQ, "-=") \
   DO( LEX_MUL_EQ, "*=") \
@@ -24,11 +28,8 @@
   DO( LEX_GE,     ">=") \
   DO( LEX_LE,     "<=") \
   DO( LEX_XOR_EQ, "^=") \
-  DO( LEX_OCTAL,  "OCTAL" ) \
-  DO( LEX_HEX,    "HEX" ) \
   DO( LEX_INC,    "++" ) \
   DO( LEX_DEC,    "--" ) \
-  DO( LEX_UNK,    "UNK") \
   DO( LEX_EOF,    "EOF")
 
 namespace lex {
@@ -39,7 +40,8 @@ struct stream_pos_t;
 enum LexToks {
   _LEX_STATE_START_  = 255,
 #define DEFINE_TOKS(name, str, ...) name,
-  FOR_LEX_STATES(DEFINE_TOKS)
+  FOR_LEX_IDENT_STATES(DEFINE_TOKS)
+  FOR_LEX_OTHER_STATES(DEFINE_TOKS)
 #undef DEFINE_TOKS
 };
 
@@ -47,7 +49,8 @@ static std::string lex_to_str(int tok)
 {
   switch (tok) {
 #define TOKS_CASE(name, str, ...) case name: return str;
-  FOR_LEX_STATES(TOKS_CASE)
+  FOR_LEX_IDENT_STATES(TOKS_CASE)
+  FOR_LEX_OTHER_STATES(TOKS_CASE)
 #undef TOKS_CASE
   case 0 ... 255:  return std::string(1, tok);
   default:         return "Error";
@@ -116,6 +119,10 @@ int hand_lex(stream_t & stream, lexed_t & lx);
 /// Main lexer function
 machine_t make_fsm_table();
 int fsm_lex(stream_t & stream, const machine_t & table, lexed_t & lx);
+
+/// re2c lexer function
+int re2c_lex(stream_t & stream, lexed_t & lx);
+
   
 /// Dump lexer results
 void print(std::ostream& os, const lexed_t & res);

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
 project(LEX LANGUAGES CXX)
 
@@ -6,7 +6,11 @@ project(LEX LANGUAGES CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 include(BuildType)
 
+find_program(RE2C_EXECUTABLE re2c)
+
+
 add_library(lex)
+target_include_directories(lex PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(src)
 
 add_executable(lexit)
