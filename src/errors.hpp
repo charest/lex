@@ -12,14 +12,13 @@ struct stream_t;
 struct stream_pos_t;
 
 /// dump out the current line
-int error(stream_t & is, const std::string & msg);
+int error(stream_t & is, const std::string & msg, size_t i);
 
 /// dump out the current line
 int error(
   stream_t & is,
   const std::string & msg,
-  const stream_pos_t & pos,
-  const std::vector<std::ios::pos_type> & lines);
+  const stream_pos_t & pos);
 
 
 } // namespace 

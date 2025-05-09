@@ -84,20 +84,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  std::unique_ptr<stream_t> is;
-  std::string bufstr;
-  std::istringstream bufss;
-
-  if (buffered_io) {
-    std::cout << "Buffering input." << std::endl;
-    auto inbuf = std::istreambuf_iterator<char>(infile.rdbuf());
-    bufstr = std::string(inbuf, std::istreambuf_iterator<char>());
-    bufss = std::istringstream(bufstr);
-    is = std::make_unique<stream_t>(bufss, filename);
-  }
-  else{
-    is = std::make_unique<stream_t>(infile, filename);
-  }
+  auto is = make_stream(infile, filename);
 
   // Process
   auto table = make_fsm_table();
@@ -111,26 +98,27 @@ int main(int argc, char* argv[]) {
   
     auto start = std::chrono::high_resolution_clock::now();
     
-    is->reset();
     res = std::make_unique<lexed_t>();
 
+#if 0
     if (lexer_type == "hand") {
       std::cout << "... Lexing via hand lexer ... ";
-      err += hand_lex(*is, *res);
+      err += hand_lex(is, *res);
     }
     else if (lexer_type == "fsm" ) {
       std::cout << "... Lexing via FSM ... ";
-      err += fsm_lex(*is, table, *res);
+      err += fsm_lex(is, table, *res);
     }
     else if (lexer_type == "re2c" ) {
       std::cout << "... Lexing via re2c ... ";
-      err += re2c_lex(*is, *res);
+      err += re2c_lex(is, *res);
     }
     else {
       std::cerr << "Unknown lexer type: '" << lexer_type << "'" << std::endl;
       return -1;
     }
-  
+#endif
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> duration = end - start;
     elapsed += duration.count();
@@ -143,7 +131,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "Avg Elapsed: " << duration.count()/niter << " ms" << std::endl;
   std::cout << "Tokens: " << res->numTokens() << std::endl;
-  std::cout << "Lines: " << res->line_start.size() << std::endl;
+  std::cout << "Lines: " << is.newlines.size() << std::endl;
   
   // output
   if (output_file.size()) {

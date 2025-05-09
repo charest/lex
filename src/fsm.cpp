@@ -14,7 +14,6 @@
 #define FOR_FSM_TRANS_STATES(DO) \
   DO( S_REJECT     , "REJECT"      ) \
   DO( S_SPACE      , "SPACE"       ) \
-  DO( S_NEWLINE    , "NEWLINE"     ) \
   DO( S_SEEN_DQUOTE, "SEEN_DQUOTE" )
 
 #define FOR_FSM_FINAL_ID_STATES(DO) \
@@ -60,7 +59,6 @@
 
 
 #define FOR_FSM_ONE_CHAR_CLASSES(DO) \
-  DO( C_CR,      "CR"    , '\r') \
   DO( C_LF,      "LF"    , '\n') \
   DO( C_EQUAL,   "EQUAL" , '=') \
   DO( C_ZERO,    "ZERO"  , '0') \
@@ -76,7 +74,7 @@
   DO( C_DOT,     "DOT"   , '.') \
   DO( C_SQUOTE,  "SQUOTE", '\'') \
   DO( C_DQUOTE,  "DQUOTE", '\"') \
-  DO( C_EOF,     "EOF"   , EOF)
+  DO( C_EOF,     "EOF"   , '\0')
 
 #define FOR_FSM_TWO_CHAR_CLASSES(DO) \
   DO( C_EQUABLE, "EQUABLE", '^', '!') \
@@ -167,7 +165,7 @@ int char_to_class(char c)
   FOR_FSM_IF_CLASSES(TOKS_CASE)
   #undef TOKS_CASE
   
-  return S_UNK;
+  return C_EOF;
 }// end of Get_FSM_Col
 
 machine_t make_fsm_table() {
@@ -176,8 +174,7 @@ machine_t make_fsm_table() {
   stateTable.resize(FSM_NUM_STATES, C_SIZE);
   stateTable.fill(S_REJECT);
   
-  stateTable(S_REJECT, C_LF) = S_NEWLINE;
-  
+  stateTable(S_REJECT, C_LF   ) = S_SPACE;
   stateTable(S_REJECT, C_WHITE) = S_SPACE;
   stateTable(S_SPACE,  C_WHITE) = S_SPACE;
 
@@ -258,12 +255,10 @@ machine_t make_fsm_table() {
   return stateTable;
 }
 
-int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
+int fsm_lex(stream_t & is, const machine_t & table, lexed_t & lx)
 {
   // get data from user
-  auto & infile = in.in;
-  
-  if (!infile) return error(in, "File does not exist.");
+  auto & buffer = is.buffer;
   
   // declare variables
   int err = 0;
@@ -271,13 +266,13 @@ int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
   auto currChar = ' ';
   int currState = S_REJECT;
   int prevState = S_REJECT;
-  auto prevPos = infile.tellg();
-  auto currPos = prevPos;
+  size_t prevPos = 0;
+  size_t currPos = 0;
   std::string currToken = "";
     
 
   // use a loop to scan each line in the file
-  while(!infile.eof())
+  while(currPos <= buffer.size())
   {
     auto begPos = prevPos;
 
@@ -285,9 +280,9 @@ int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
       prevState = currState;
       prevPos = currPos;
       
-      currChar = infile.get();
+      currChar = buffer[currPos];
       currToken += currChar;
-      currPos = infile.tellg();
+      currPos++;
       
       // get the column number for the curr character
       col = char_to_class(currChar);
@@ -304,7 +299,7 @@ int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
     currToken.pop_back(); // last char is rejected
     stream_pos_t pos{begPos, prevPos};
     
-    if (prevState == S_UNK) err += error(in, "Unknown string.", pos, lx.line_start);
+    if (prevState == S_UNK) err += error(is, "Unknown string.", pos);
 
     switch (prevState) {
 
@@ -331,10 +326,6 @@ int fsm_lex(stream_t & in, const machine_t & table, lexed_t & lx)
 
       case S_EQUABLE_EQ:
         lx.add( currToken[0] == '!' ? LEX_NE : LEX_XOR_EQ, pos );
-        break;
-
-      case S_NEWLINE:
-        lx.line(pos.end);
         break;
 
     } // switch

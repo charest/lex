@@ -10,25 +10,17 @@
 namespace lex {
 
 struct scanner_t {
-  std::istream & in;  
-  int LastChar = ' ';
-  int NextChar = ' ';
-  std::ios::pos_type LastPos = std::ios::beg;
-  std::ios::pos_type NextPos = std::ios::beg;
+  const std::string & buffer;  
+  std::size_t cursor = 0;
 
-  std::vector<std::ios::pos_type> LineStart;
+  scanner_t(const std::string & buf) : buffer(buf) {}
 
-  scanner_t(std::istream & instr) : in(instr) {}
+  int peek(int i=0) 
+  { return ((cursor+i) >= buffer.size()) ? -1 : buffer[cursor+i]; }
 
-  int peek() { return in.peek(); }
-
-  int advance()
+  void advance()
   { 
-    LastPos = NextPos;
-    LastChar = in.get();
-    NextPos = in.tellg();
-    if (LastChar == '\n') LineStart.push_back(in.tellg());
-    return LastChar;
+    cursor++;
   }
 };
  
@@ -39,11 +31,12 @@ int a_or_ab(
   int NextSym,
   int NextLabel)
 {
-  auto tok = scanner.LastChar;
-  auto LastChar = scanner.advance();
+  auto tok = scanner.peek();
+  scanner.advance();
+  auto LastChar = scanner.peek();
   if (LastChar == NextSym) {
     tok = NextLabel;
-    LastChar = scanner.advance();
+    scanner.advance();
   }
   return tok;
 }
@@ -56,7 +49,7 @@ std::pair<int,int> gettok(
   scanner_t & scanner,
   std::string & IdentifierStr)
 {
-  auto LastChar = scanner.LastChar;
+  auto LastChar = scanner.peek();
   int err = 0;
   IdentifierStr.clear();
   
@@ -64,10 +57,11 @@ std::pair<int,int> gettok(
   // identifier: [a-zA-Z][a-zA-Z0-9]*
   if (std::isalpha(LastChar)) {
      
-    while (std::isalnum(LastChar) || LastChar=='_') {
+    do {
       IdentifierStr += LastChar;
-      LastChar = scanner.advance();
-    }
+      scanner.advance();
+      LastChar = scanner.peek();
+    } while (std::isalnum(LastChar) || LastChar=='_');
 
     return {LEX_IDENT, err};
   }
@@ -75,16 +69,17 @@ std::pair<int,int> gettok(
   //----------------------------------------------------------------------------
   // Number: [0-9.]+
 
-  if (std::isdigit(LastChar) || (LastChar == '.' && std::isdigit(scanner.peek()))) {
+  if (std::isdigit(LastChar) || (LastChar == '.' && std::isdigit(scanner.peek(1)))) {
 
     // read first part of number
     int numDec = (LastChar == '.');
     do {
       IdentifierStr += LastChar;
-      LastChar = scanner.advance();
+      scanner.advance();
+      LastChar = scanner.peek();
       auto has_dec = (LastChar == '.');
       if (numDec == 1 && has_dec)
-        err += error( is, "Multiple '.' encountered in real" );
+        err += error( is, "Multiple '.' encountered in real", scanner.cursor );
       numDec += has_dec;
     } while (std::isdigit(LastChar) || LastChar == '.');
 
@@ -94,21 +89,24 @@ std::pair<int,int> gettok(
       is_float = true;
       // eat e/E
       IdentifierStr += LastChar;
-      LastChar = scanner.advance();
+      scanner.advance();
+      LastChar = scanner.peek();
       // make sure next character is sign or number
       auto isSign = (LastChar == '+') || (LastChar == '-');
       if (!isSign && !std::isdigit(LastChar))
-        err += error( is, "Digit or +/- must follow exponent" );
+        err += error( is, "Digit or +/- must follow exponent", scanner.cursor );
       // eat sign or number
       IdentifierStr += LastChar;
-      LastChar = scanner.advance();
+      scanner.advance();
+      LastChar = scanner.peek();
       // if it was a sign, there has to be a number
       if (isSign && !std::isdigit(LastChar))
-        err += error( is, "Digit must follow exponent sign" );
+        err += error( is, "Digit must follow exponent sign", scanner.cursor );
       // only numbers should follow
       while (std::isdigit(LastChar)) {
         IdentifierStr += LastChar;
-        LastChar = scanner.advance();
+        scanner.advance();
+        LastChar = scanner.peek();
       }
     }
     auto tok = is_float ? LEX_REAL : LEX_INT;
@@ -121,9 +119,10 @@ std::pair<int,int> gettok(
   // Comment until end of line.
   case '#':
   
-    do
-      LastChar = scanner.advance();
-    while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
+    do {
+      scanner.advance();
+      LastChar = scanner.peek();
+    } while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
 
     return {LEX_COMMENT, err};
   
@@ -131,14 +130,17 @@ std::pair<int,int> gettok(
   //----------------------------------------------------------------------------
   // string literal
   case '\"':
+      
+    scanner.advance();
+    LastChar = scanner.peek();
 
-    do { 
-      LastChar = scanner.advance();
+    while (LastChar != '\"') {
       IdentifierStr += LastChar;
-    } while (LastChar!= '\"');
-    IdentifierStr.pop_back();
+      scanner.advance();
+      LastChar = scanner.peek();
+    }
 
-    LastChar = scanner.advance();
+    scanner.advance();
     
     return {LEX_QUOTED, err};
   
@@ -180,7 +182,7 @@ std::pair<int,int> gettok(
   //----------------------------------------------------------------------------
   // Otherwise, just return the character as its ascii value.
   auto tok = LastChar;
-  LastChar = scanner.advance();
+  scanner.advance();
   return {tok, err};
 }
 
@@ -189,31 +191,23 @@ std::pair<int,int> gettok(
 //==============================================================================
 int hand_lex(stream_t & in, lexed_t & res)
 {
-  if (!in.in) return error(in, "File does not exist.");
-
   int err = 0;
   std::string identifier;
   stream_pos_t pos;
 
-  scanner_t scanner{in.in};
-  scanner.advance();
+  scanner_t scanner{in.buffer};
   
   while (true)
   {
     // Skip any whitespace.
-    while (isspace(scanner.LastChar))
+    while (isspace(scanner.peek()))
       scanner.advance();
     
     // get the next token
-    pos.begin = scanner.LastPos;
+    pos.begin = scanner.cursor;
     auto [tok, e] = gettok(in, scanner, identifier);
     err += e;
-    pos.end = scanner.LastPos;
-
-    if (scanner.LineStart.size()) {
-      res.lines( scanner.LineStart );
-      scanner.LineStart.clear();
-    }
+    pos.end = scanner.cursor;
 
     if (tok == EOF) break;
 

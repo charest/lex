@@ -14,7 +14,7 @@ using testing::ElementsAre;
 static std::pair<lexed_t,int> test(const std::string & inp)
 {
   std::stringstream ss(inp);
-  stream_t is(ss);
+  auto is = make_stream(ss);
   lexed_t res;
   auto err = hand_lex(is, res);
   print(std::cout, res);
@@ -64,7 +64,7 @@ static void test_file(
   std::cout << "Processing: " << inname << std::endl;
 
   std::ifstream infile(inname);
-  stream_t is(infile, inname);
+  auto is = make_stream(infile, inname);
 
   auto start = std::chrono::high_resolution_clock::now();
   lexed_t res;
@@ -74,7 +74,7 @@ static void test_file(
 
   std::cout << "Elapsed: " << duration.count() << " ms" << std::endl;
   std::cout << "Tokens: " << res.numTokens() << std::endl;
-  std::cout << "Lines: " << res.line_start.size() << std::endl;
+  std::cout << "Lines: " << is.newlines.size() << std::endl;
   
   if (gold.size()) {
   
@@ -199,15 +199,6 @@ TEST(hand, error)
 {
   auto [res, err] = test("0..1");
   ASSERT_TRUE(err);
-}
-
-
-TEST(hand, lines)
-{
-  auto [res, err] = test("0\n1");
-  ASSERT_EQ( res.line_start.size(), 1);
-  EXPECT_THAT( res.line_start, ElementsAre(2) );
-  ASSERT_FALSE(err);
 }
 
 TEST(hand, fake_10k)

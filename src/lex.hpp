@@ -63,18 +63,12 @@ static std::string lex_to_str(int tok)
 struct lexed_t {
   std::vector<int> tokens;
   std::vector<stream_pos_t> token_pos;
-  std::vector<std::ios::pos_type> line_start;
 
   std::string identifier_data;
   std::vector<int> identifier_offsets;
   std::vector<int> identifier_tokens;
 
   void add(int tok, stream_pos_t pos, const std::string & str = "");
-
-  void line(std::ios::pos_type p) { line_start.push_back(p); }
-
-  void lines( std::vector<std::ios::pos_type> & p)
-  { line_start.insert( line_start.end(), p.begin(), p.end() ); }
 
   size_t numTokens() const { return tokens.size(); }
   size_t numIdentifiers() const { return identifier_offsets.size(); }

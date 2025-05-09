@@ -26,6 +26,10 @@ void printRight(std::ostream & os, int width, char sep, const T & val = std::str
   os << std::right << std::setw(width) << std::setfill(sep) << val;
 }
 
+std::string extract_to_newline(const std::string& input, size_t start);
+
+std::vector<size_t> newline_positions(const std::string & text);
+
 } // namespace
 
 #endif // CONTRA_STRING_UTILS_HPP

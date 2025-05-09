@@ -8,58 +8,24 @@
 #include <fstream>
 #include <sstream>
 
-namespace lex {
+/*!conditions:re2c*/
 
-#if 0
-static std::pair<int,int> lex_str(std::istream & in)
-{
-  for (unsigned long u = q;; fprintf(stderr, "\\x%lx", u)) {
-    in.tok = in.cur;
-    /*!re2c
-      re2c:api= custom;
-      re2c:api:style = free-form;
-      re2c:define:YYCTYPE = char;
-      re2c:define:YYPEEK = "in.peek()";
-      re2c:define:YYSKIP = "{ str += yych; in.ignore(); if (in.eof()) return {err, EOF}; }";
-      re2c:define:YYBACKUP = "mar = in.tellg();";
-      re2c:define:YYRESTORE = "in.seekg(mar);";
-      re2c:yyfill:enable = 0;
-      *                    { return false; }
-      [^\n\\]              { u = in.tok[0]; if (u == q) break; continue; }
-      "\\a"                { u = '\a'; continue; }
-      "\\b"                { u = '\b'; continue; }
-      "\\f"                { u = '\f'; continue; }
-      "\\n"                { u = '\n'; continue; }
-      "\\r"                { u = '\r'; continue; }
-      "\\t"                { u = '\t'; continue; }
-      "\\v"                { u = '\v'; continue; }
-      "\\\\"               { u = '\\'; continue; }
-      "\\'"                { u = '\''; continue; }
-      "\\\""               { u = '"';  continue; }
-      "\\?"                { u = '?';  continue; }
-      "\\" [0-7]{1,3}      { lex_oct(in.tok, in.cur, u); continue; }
-      "\\u" [0-9a-fA-F]{4} { lex_hex(in.tok, in.cur, u); continue; }
-      "\\U" [0-9a-fA-F]{8} { lex_hex(in.tok, in.cur, u); continue; }
-      "\\x" [0-9a-fA-F]+   { if (!lex_hex(in.tok, in.cur, u)) return false; continue; }
-    */
-  }
-  fprintf(stderr, "%c", q);
-  return true;
-}
-#endif
+namespace lex {
 
 std::tuple<int,stream_pos_t,int> scan(
   stream_t & strm,
-  std::vector<std::ios::pos_type> & lines,
   std::string & str) 
 {
-
-  auto & in = strm.in;
-  std::streampos mar;
   int err = 0;
   stream_pos_t pos;
 
-  while (true) {
+#if 0
+  auto & in = strm.in;
+  std::streampos mar;
+  int state = yycinit;
+  int ty = LEX_UNK;
+
+  //while (true) {
     str.clear();
     pos.begin = in.tellg();
 
@@ -68,11 +34,31 @@ std::tuple<int,stream_pos_t,int> scan(
     re2c:api:style = free-form;
     re2c:define:YYCTYPE = char;
     re2c:define:YYPEEK = "in.peek()";
-    re2c:define:YYSKIP = "{ str += yych; in.ignore(); pos.end=in.tellg(); if (in.eof()) return {err, pos, EOF}; }";
+    re2c:define:YYSKIP = "{  if (in.eof()) return {err, pos, ty}; str += yych; std::cout << str << std::endl; in.ignore(); pos.end=in.tellg(); }";
     re2c:define:YYBACKUP = "mar = in.tellg();";
     re2c:define:YYRESTORE = "in.seekg(mar);";
+    re2c:define:YYGETCONDITION = "state";
+    re2c:define:YYSETCONDITION = "state = @@;";
+    re2c:define:YYSHIFT = "";
     re2c:yyfill:enable = 0;
 
+    alpha = [a-zA-Z_];
+    digit = [0-9];
+
+    <*> * { std::cout << "LEAVE" << std::endl; return {err, pos, LEX_UNK}; }
+    <ident> * { std::cout << "END" << std::endl; return {err, pos, ty}; }
+
+    <init> "" / [1-9] :=> dec
+    <init> "" / alpha :=> ident
+
+    <dec> [0-9]? { ty = LEX_INT; goto yyc_dec; }
+    <dec> *  { return {err, pos, LEX_INT}; }
+
+    <ident> (alpha | digit) { ty = LEX_IDENT; goto yyc_ident; }
+
+  */
+
+  /*
     // end of file
     end = "\x00";
     end { return {err, pos, EOF}; }
@@ -117,7 +103,8 @@ std::tuple<int,stream_pos_t,int> scan(
     ("0" [xX] hex+)  { return {err, pos, LEX_HEX  }; }
     ("0" [0-7]+)     { return {err, pos, LEX_OCTAL}; }
     "0" | [1-9] (dig+)?  { return {err, pos, LEX_INT  }; }
-    (dig+)? [.] dig+ ([eE][+-]?dig+)? { return {err, pos, LEX_REAL }; }
+
+    "" / [1-9]         { goto dec; }
   
     *
     {
@@ -126,7 +113,9 @@ std::tuple<int,stream_pos_t,int> scan(
     }
   */
 
-  }
+  //}
+#endif
+
   return {err, pos, EOF};
 }
 
@@ -135,10 +124,11 @@ int re2c_lex(stream_t & strm, lexed_t & lx)
   int err, tok;
   stream_pos_t pos;
   std::string ident;
-  auto & in = strm.in;
-
-  do {
-    std::tie(err, pos, tok) = scan(strm, lx.line_start, ident);
+  size_t cur = 0;
+  auto bufsize = strm.buffer.size();
+  
+  while(cur < bufsize) {
+    std::tie(err, pos, tok) = scan(strm, ident);
 
     switch (tok) {
     #define TOKS_CASE(name, str, ...) case name: lx.add(tok, pos, ident); break;
@@ -154,7 +144,8 @@ int re2c_lex(stream_t & strm, lexed_t & lx)
       break;
     }
 
-  } while (tok != EOF);
+  }
+
   return err;
 }
 

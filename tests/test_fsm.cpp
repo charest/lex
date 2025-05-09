@@ -14,7 +14,7 @@ static std::pair<lexed_t,int> test(const std::string & inp)
   auto table = make_fsm_table();
 
   std::stringstream ss(inp);
-  stream_t is(ss);
+  auto is = make_stream(ss);
   lexed_t res;
   auto err = fsm_lex(is, table, res);
   print(std::cout, res);
@@ -67,7 +67,7 @@ static void test_file(
   auto table = make_fsm_table();
 
   std::ifstream infile(inname);
-  stream_t is(infile, inname);
+  auto is = make_stream(infile, inname);
   
   auto start = std::chrono::high_resolution_clock::now();
   lexed_t res;
@@ -77,7 +77,7 @@ static void test_file(
 
   std::cout << "Elapsed: " << duration.count() << " ms" << std::endl;
   std::cout << "Tokens: " << res.numTokens() << std::endl;
-  std::cout << "Lines: " << res.line_start.size() << std::endl;
+  std::cout << "Lines: " << is.newlines.size() << std::endl;
 
   if (gold.size()) {
   
@@ -214,14 +214,6 @@ TEST(fsm, function_add)
   EXPECT_EQ(res.getIdentifierString(6), "return");
   EXPECT_EQ(res.getIdentifierString(7), "a");
   EXPECT_EQ(res.getIdentifierString(8), "b");
-}
-
-TEST(fsm, lines)
-{
-  auto [res, err] = test("0\n1");
-  ASSERT_EQ( res.line_start.size(), 1);
-  EXPECT_THAT( res.line_start, ElementsAre(2) );
-  ASSERT_FALSE(err);
 }
 
 TEST(fsm, fake_10k)

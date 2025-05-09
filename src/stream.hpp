@@ -3,32 +3,24 @@
 
 #include <istream>
 #include <string>
+#include <vector>
 
 namespace lex {
 
-//==============================================================================
-/// Stream position
-//==============================================================================
 struct stream_pos_t {
-  std::ios::pos_type begin, end;
+  std::size_t begin, end;
 };
 
 
 struct stream_t {
 
-  std::istream & in;
+  std::string buffer;
   std::string name;
-
-  stream_t(std::istream & s, const std::string & nm="")
-    : in(s), name(nm) {}
-
-  void reset()
-  {
-    in.clear();
-    in.seekg( 0, std::ios::beg );
-  }
+  std::vector<size_t> newlines;
 
 };
+
+stream_t make_stream(std::istream & in, const std::string & name = "");
 
 } // namespace
 
