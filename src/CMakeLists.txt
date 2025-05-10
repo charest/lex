@@ -14,7 +14,7 @@ if (RE2C_EXECUTABLE)
   # Create custom command to generate lexer.c from lexer.re
   add_custom_command(
     OUTPUT ${RE2C_OUTPUT}
-    COMMAND ${RE2C_EXECUTABLE} --start-conditions -o ${RE2C_OUTPUT} ${RE2C_INPUT}
+    COMMAND ${RE2C_EXECUTABLE} -o ${RE2C_OUTPUT} ${RE2C_INPUT}
     DEPENDS ${RE2C_INPUT}
     COMMENT "Generating C source from ${RE2C_INPUT} with re2c"
     VERBATIM

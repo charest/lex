@@ -115,7 +115,10 @@ static void test_file(
 
 TEST(fsm, ident)
 {
-  test("ident", {{LEX_IDENT, "ident"}});
+  test(" ident", {{LEX_IDENT, "ident"}});
+  test("ident",  {{LEX_IDENT, "ident"}});
+  test("id1ent", {{LEX_IDENT, "id1ent"}});
+  test("1ident", {{LEX_INT, "1"}, {LEX_IDENT, "ident"}});
 }
 
 TEST(fsm, space)

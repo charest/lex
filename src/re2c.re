@@ -54,7 +54,7 @@ std::tuple<int,char *, char *,int> scan(stream_t & strm, char * YYCURSOR)
     // floating literals
     frc = [0-9]* "." [0-9]+ | [0-9]+ ".";
     exp = 'e' [+-]? [0-9]+;
-    flt = (frc exp? | [0-9]+ exp) [fFlL]?;
+    flt = (frc exp? | [0-9]+ exp);
     flt { return {err, start, YYCURSOR, LEX_REAL}; }
 
     quote = ["] [^"]* ["];
