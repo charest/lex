@@ -113,6 +113,7 @@ TEST(hand, quote) {
 }
 
 TEST(hand, comment) {
+  test("# test\n", {{LEX_COMMENT, ""}});
   test("# test", {{LEX_COMMENT, ""}});
   test("# test\nident", {{LEX_COMMENT, ""}, {LEX_IDENT, "ident"}});
 }

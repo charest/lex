@@ -136,6 +136,7 @@ TEST(fsm, quote) {
 }
 
 TEST(fsm, comment) {
+  test("# test\n", {{LEX_COMMENT, ""}});
   test("# test", {{LEX_COMMENT, ""}});
   test("# test\nident", {{LEX_COMMENT, ""}, {LEX_IDENT, "ident"}});
 }

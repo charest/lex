@@ -102,7 +102,8 @@ static void test_file(
 //=============================================================================
 
 TEST(re2c, ident) {
-  test("ident", {{LEX_IDENT, "ident"}});
+  test(" ident", {{LEX_IDENT, "ident"}});
+  test("ident",  {{LEX_IDENT, "ident"}});
   test("id1ent", {{LEX_IDENT, "id1ent"}});
   test("1ident", {{LEX_INT, "1"}, {LEX_IDENT, "ident"}});
 }

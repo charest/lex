@@ -21,7 +21,7 @@ FOR_LEXERS(LEXER_TOK)
 
 void print_usage(char* argv[]) {
   std::cerr << "Usage: " << argv[0] << " <input_file> <lexer_type: fsm|hand> ";
-  std::cerr << "[--output <file>] [--buffered] [--iters 5]\n";
+  std::cerr << "[--output <file>] [--iters 5]\n";
 }
 
 bool valid_lexer(const std::string & ty)
@@ -54,7 +54,6 @@ int main(int argc, char* argv[]) {
 
   // Parse optional args
   std::string output_file;
-  bool  buffered_io= false;
   int niter = 1;
 
   for (int i = 3; i < argc; ++i) {
@@ -63,8 +62,6 @@ int main(int argc, char* argv[]) {
       output_file = argv[++i];
     else if (arg == "--iters" && i + 1 < argc)
       niter = atoi(argv[++i]);
-    else if (arg == "--buffered")
-      buffered_io = true;
     else if (arg == "--help" ) {
       print_usage(argv);
       return 0;
@@ -100,7 +97,6 @@ int main(int argc, char* argv[]) {
     
     res = std::make_unique<lexed_t>();
 
-#if 0
     if (lexer_type == "hand") {
       std::cout << "... Lexing via hand lexer ... ";
       err += hand_lex(is, *res);
@@ -117,7 +113,6 @@ int main(int argc, char* argv[]) {
       std::cerr << "Unknown lexer type: '" << lexer_type << "'" << std::endl;
       return -1;
     }
-#endif
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> duration = end - start;

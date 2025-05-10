@@ -268,7 +268,6 @@ int fsm_lex(stream_t & is, const machine_t & table, lexed_t & lx)
   int prevState = S_REJECT;
   size_t prevPos = 0;
   size_t currPos = 0;
-  std::string currToken = "";
     
 
   // use a loop to scan each line in the file
@@ -281,7 +280,6 @@ int fsm_lex(stream_t & is, const machine_t & table, lexed_t & lx)
       prevPos = currPos;
       
       currChar = buffer[currPos];
-      currToken += currChar;
       currPos++;
       
       // get the column number for the curr character
@@ -296,27 +294,32 @@ int fsm_lex(stream_t & is, const machine_t & table, lexed_t & lx)
     // (the starting state), then we have sucessfully parsed
     // a token.
       
-    currToken.pop_back(); // last char is rejected
     stream_pos_t pos{begPos, prevPos};
+    auto len = prevPos - begPos;
     
     if (prevState == S_UNK) err += error(is, "Unknown string.", pos);
 
     switch (prevState) {
 
-      #define STATE_CASE(name, str) case name: lx.add(currToken[0], pos); break;
+      #define STATE_CASE(name, str) \
+        case name: lx.add(buffer[begPos], pos); break;
       FOR_FSM_EXACT_STATES(STATE_CASE)
       #undef STATE_CASE
 
-      #define STATE_CASE(name, str, lstate) case name: lx.add(lstate, pos, currToken); break;
+      #define STATE_CASE(name, str, lstate) \
+        case name: \
+        lx.add(lstate, pos, buffer.substr(begPos, len)); \
+        break;
       FOR_FSM_FINAL_ID_STATES(STATE_CASE)
       #undef STATE_CASE
 
-      #define STATE_CASE(name, str, lstate) case name: lx.add(lstate, pos); break;
+      #define STATE_CASE(name, str, lstate) \
+        case name: lx.add(lstate, pos); break;
       FOR_FSM_FINAL_OP_STATES(STATE_CASE)
       #undef STATE_CASE
 
       case S_QUOTED:
-        lx.add(LEX_QUOTED, pos, currToken.substr(1, currToken.size()-2));
+        lx.add(LEX_QUOTED, pos, buffer.substr(begPos+1, len-2));
         break;
       
       case S_COMMENT:
@@ -325,14 +328,13 @@ int fsm_lex(stream_t & is, const machine_t & table, lexed_t & lx)
 
 
       case S_EQUABLE_EQ:
-        lx.add( currToken[0] == '!' ? LEX_NE : LEX_XOR_EQ, pos );
+        lx.add( buffer[begPos] == '!' ? LEX_NE : LEX_XOR_EQ, pos );
         break;
 
     } // switch
 
     // Reset the state/token
     currState = table(currState, col);
-    currToken = currChar;
   }
 
   return err;

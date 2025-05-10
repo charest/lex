@@ -8,130 +8,114 @@
 #include <fstream>
 #include <sstream>
 
-/*!conditions:re2c*/
-
 namespace lex {
 
-std::tuple<int,stream_pos_t,int> scan(
-  stream_t & strm,
-  std::string & str) 
+std::tuple<int,char *, char *,int> scan(stream_t & strm, char * YYCURSOR)
 {
   int err = 0;
-  stream_pos_t pos;
+  auto YYMARKER = YYCURSOR;
+  auto start = YYCURSOR;
+  auto & buffer = strm.buffer;
+  auto buflen = buffer.size();
+  auto bufbeg = &buffer[0];
+  auto bufend = &buffer[buflen];
 
-#if 0
-  auto & in = strm.in;
-  std::streampos mar;
-  int state = yycinit;
-  int ty = LEX_UNK;
-
-  //while (true) {
-    str.clear();
-    pos.begin = in.tellg();
+  while (YYCURSOR < bufend) {
+    start = YYCURSOR;
 
   /*!re2c
-    re2c:api= custom;
-    re2c:api:style = free-form;
-    re2c:define:YYCTYPE = char;
-    re2c:define:YYPEEK = "in.peek()";
-    re2c:define:YYSKIP = "{  if (in.eof()) return {err, pos, ty}; str += yych; std::cout << str << std::endl; in.ignore(); pos.end=in.tellg(); }";
-    re2c:define:YYBACKUP = "mar = in.tellg();";
-    re2c:define:YYRESTORE = "in.seekg(mar);";
-    re2c:define:YYGETCONDITION = "state";
-    re2c:define:YYSETCONDITION = "state = @@;";
-    re2c:define:YYSHIFT = "";
-    re2c:yyfill:enable = 0;
+    re2c:define:YYCTYPE  = char;
+    re2c:yyfill:enable   = 0;
 
-    alpha = [a-zA-Z_];
-    digit = [0-9];
-
-    <*> * { std::cout << "LEAVE" << std::endl; return {err, pos, LEX_UNK}; }
-    <ident> * { std::cout << "END" << std::endl; return {err, pos, ty}; }
-
-    <init> "" / [1-9] :=> dec
-    <init> "" / alpha :=> ident
-
-    <dec> [0-9]? { ty = LEX_INT; goto yyc_dec; }
-    <dec> *  { return {err, pos, LEX_INT}; }
-
-    <ident> (alpha | digit) { ty = LEX_IDENT; goto yyc_ident; }
-
-  */
-
-  /*
-    // end of file
-    end = "\x00";
-    end { return {err, pos, EOF}; }
-
-    // single line comment
-    scm = "#" [^\n]* ("\n" | end);
-    scm { return {err, pos, LEX_COMMENT}; }
- 
-    // whitespace
-    wsp = [ \t\v\f]+;
-    wsp { continue; }
-
-    // character and string literals
-    //['"] { if (!lex_str(in, in.cur[-1])) return false; continue; }
-
-    quote = ["] [^"]* ["];
-    quote { str.pop_back(); str.erase(0, 1); return {err, pos, LEX_QUOTED}; }
-
-
-    dig = [0-9];
-    let = [a-zA-Z_];
-    hex = [a-fA-F0-9];
-    any = [\000-\377];
-
-    special =  [!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?];
-
-    let (let|dig)*   { return {err, pos, LEX_IDENT}; }
-    "\r\n"|"\n"      { lines.push_back(pos.end); continue; }
-
-    special          { return {err, pos, str[0]}; }
-    "+="             { return {err, pos, LEX_ADD_EQ}; }
-    "-="             { return {err, pos, LEX_SUB_EQ}; }
-    "*="             { return {err, pos, LEX_MUL_EQ}; }
-    "/="             { return {err, pos, LEX_DIV_EQ}; }
-    "++"             { return {err, pos, LEX_INC   }; }
-    "--"             { return {err, pos, LEX_DEC   }; }
-    "<="             { return {err, pos, LEX_LE    }; }
-    ">="             { return {err, pos, LEX_GE    }; }
-    "=="             { return {err, pos, LEX_EQUIV }; }
-    "!="             { return {err, pos, LEX_NE    }; }
-	
-    ("0" [xX] hex+)  { return {err, pos, LEX_HEX  }; }
-    ("0" [0-7]+)     { return {err, pos, LEX_OCTAL}; }
-    "0" | [1-9] (dig+)?  { return {err, pos, LEX_INT  }; }
-
-    "" / [1-9]         { goto dec; }
-  
     *
     {
-      err += error(strm, "Unexpected character.");
-      return {err, pos, LEX_UNK};
+      err += error(strm, "Unexpected character.", YYCURSOR-bufbeg);
+      return {err, start, YYCURSOR, LEX_UNK};
     }
+
+    // whitespace
+    wsp = [ \t\v\n\r]+;
+    wsp { continue; }
+    
+    // single line comment
+    scm = "#" [^\n\x00]*;
+    scm { return {err, start, YYCURSOR, LEX_COMMENT}; }
+
+    let = [a-zA-Z_];
+    dig = [0-9];
+    oct = "0" [0-7]*;
+    dec = "0" | ([1-9][0-9]*);
+    hex = '0x' [0-9a-fA-F]+;
+
+    dec       { return {err, start, YYCURSOR, LEX_INT  }; }
+    oct       { return {err, start, YYCURSOR, LEX_OCTAL}; }
+    hex       { return {err, start, YYCURSOR, LEX_HEX  }; }
+
+    // floating literals
+    frc = [0-9]* "." [0-9]+ | [0-9]+ ".";
+    exp = 'e' [+-]? [0-9]+;
+    flt = (frc exp? | [0-9]+ exp) [fFlL]?;
+    flt { return {err, start, YYCURSOR, LEX_REAL}; }
+
+    quote = ["] [^"]* ["];
+    quote            { return {err, start, YYCURSOR,    LEX_QUOTED}; }
+
+    
+    special =  [!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?];
+
+    let (let|dig)*   { return {err, start, YYCURSOR,     LEX_IDENT}; }
+
+
+    special          { return {err, start, YYCURSOR, *(YYCURSOR-1)}; }
+    "+="             { return {err, start, YYCURSOR,    LEX_ADD_EQ}; }
+    "-="             { return {err, start, YYCURSOR,    LEX_SUB_EQ}; }
+    "*="             { return {err, start, YYCURSOR,    LEX_MUL_EQ}; }
+    "/="             { return {err, start, YYCURSOR,    LEX_DIV_EQ}; }
+    "++"             { return {err, start, YYCURSOR,    LEX_INC   }; }
+    "--"             { return {err, start, YYCURSOR,    LEX_DEC   }; }
+    "<="             { return {err, start, YYCURSOR,    LEX_LE    }; }
+    ">="             { return {err, start, YYCURSOR,    LEX_GE    }; }
+    "=="             { return {err, start, YYCURSOR,    LEX_EQUIV }; }
+    "!="             { return {err, start, YYCURSOR,    LEX_NE    }; }
+
   */
 
-  //}
-#endif
+  }
 
-  return {err, pos, EOF};
+  return {err, start, YYCURSOR, EOF};
 }
 
 int re2c_lex(stream_t & strm, lexed_t & lx) 
 {
-  int err, tok;
+  int err = 0;
   stream_pos_t pos;
   std::string ident;
-  size_t cur = 0;
-  auto bufsize = strm.buffer.size();
+  auto & buffer = strm.buffer;
+  auto bufsz = buffer.size();
+  auto bufbeg = &buffer[0];
+  auto bufend = &buffer[bufsz];
+  auto cur = bufbeg;
   
-  while(cur < bufsize) {
-    std::tie(err, pos, tok) = scan(strm, ident);
+  while(cur < bufend) {
+
+    int e, tok;
+    char * tokstart;
+    std::tie(e, tokstart, cur, tok) = scan(strm, cur);
+    err += e;
+    
+    pos.begin = tokstart - bufbeg;
+    pos.end = cur - bufbeg;
+
+    if (tok == LEX_QUOTED) {
+      pos.begin++;
+      pos.end--;
+    }
+    
+    auto len = pos.end - pos.begin;
 
     switch (tok) {
-    #define TOKS_CASE(name, str, ...) case name: lx.add(tok, pos, ident); break;
+    #define TOKS_CASE(name, str, ...) \
+      case name: lx.add(tok, pos, buffer.substr(pos.begin, len)); break;
     FOR_LEX_IDENT_STATES(TOKS_CASE)
     #undef TOKS_CASE
     
