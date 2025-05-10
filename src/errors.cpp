@@ -10,20 +10,19 @@ namespace lex {
 //==============================================================================
 /// Count the lines in the file
 //==============================================================================
-std::pair<size_t,size_t> count_lines(std::string & in, size_t pos)
+std::pair<size_t,size_t> count_lines(std::vector<size_t> & lines, size_t pos)
 {
   // seek to beginning of the file
   size_t lineCount=0;
   size_t lineStart = 0;
 
-  // Count lines up to 
-  char ch;
-  for (; pos<in.size(); ++pos) {
-    if (in[pos] == '\n') {
-      lineCount++;
-      lineStart = pos+1;
-    }
+  if (lines.size()) {
+    auto it = std::lower_bound(lines.begin(), lines.end(), pos);
+    lineStart = (it != lines.end()) ? *it : lines.back();
+    lineStart++;
+    lineCount = std::distance(lines.begin(), it);
   }
+
 
   return {lineCount, lineStart};
 }
@@ -34,7 +33,7 @@ std::pair<size_t,size_t> count_lines(std::string & in, size_t pos)
 int error(stream_t & is, const std::string & msg, std::size_t pos)
 {
   // seek to beginning of the file
-  auto [lineCount, lineStart] = count_lines(is.buffer, pos);
+  auto [lineCount, lineStart] = count_lines(is.newlines, pos);
 
   // get the line with the error
   auto line = extract_to_newline(is.buffer, lineStart);
@@ -58,15 +57,7 @@ int error(
   const stream_pos_t & pos)
 {
   // figure out the line start
-  size_t lineStart = 0;
-  size_t lineNo = 0;
-  auto & lines = is.newlines;
-
-  if (lines.size()) {
-    auto it = std::lower_bound(lines.begin(), lines.end(), pos.begin);
-    lineStart = (it != lines.end()) ? *it : lines.back();
-    lineNo = std::distance(lines.begin(), it);
-  }
+  auto [lineNo, lineStart] = count_lines(is.newlines, pos.begin);
 
   // get the line
   auto line = extract_to_newline(is.buffer, lineStart);

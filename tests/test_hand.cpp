@@ -107,6 +107,12 @@ TEST(hand, ident) {
   test("1ident", {{LEX_INT, "1"}, {LEX_IDENT, "ident"}});
 }
 
+TEST(hand, line)
+{
+  test("ident\nid", {{LEX_IDENT, "ident"}, {LEX_IDENT, "id"}});
+  test("ident\nid\n1..2", {{LEX_IDENT, "ident"}, {LEX_IDENT, "id"}, {LEX_REAL, "1..2"}}, true);
+}
+
 
 TEST(hand, quote) {
   test("\"Quoted\"", {{LEX_QUOTED, "Quoted"}});
