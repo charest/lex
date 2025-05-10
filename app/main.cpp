@@ -105,10 +105,12 @@ int main(int argc, char* argv[]) {
       std::cout << "... Lexing via FSM ... ";
       err += fsm_lex(is, table, *res);
     }
+#ifdef HAVE_RE2C
     else if (lexer_type == "re2c" ) {
       std::cout << "... Lexing via re2c ... ";
       err += re2c_lex(is, *res);
     }
+#endif
     else {
       std::cerr << "Unknown lexer type: '" << lexer_type << "'" << std::endl;
       return -1;

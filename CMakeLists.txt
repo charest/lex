@@ -8,7 +8,6 @@ include(BuildType)
 
 find_program(RE2C_EXECUTABLE re2c)
 
-
 add_library(lex)
 target_include_directories(lex PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(src)
@@ -17,6 +16,10 @@ add_executable(lexit)
 add_subdirectory(app)
 target_include_directories(lexit PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(lexit PRIVATE lex)
+
+if (RE2C_EXECUTABLE)
+	target_compile_definitions(lexit PRIVATE -DHAVE_RE2C)
+endif()
 
 #------------------------------------------------------------------------------#
 # Enable Regression Tests
