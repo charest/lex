@@ -59,6 +59,8 @@ Lines: 10000
 
 ## 🔍 Sample Results
 
+The overall time to perform lexical analysis versus the simulated lines of code
+is provided below for each algorithm.  The ```re2c``` parser tends to outperform the others.
 
 ![image](bench.png)
 
