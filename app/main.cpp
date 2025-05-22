@@ -20,7 +20,7 @@ FOR_LEXERS(LEXER_TOK)
 };
 
 void print_usage(char* argv[]) {
-  std::cerr << "Usage: " << argv[0] << " <input_file> <lexer_type: fsm|hand> ";
+  std::cerr << "Usage: " << argv[0] << " <input_file> <lexer_type: fsm|hand|re2c> ";
   std::cerr << "[--output <file>] [--iters 5]\n";
 }
 

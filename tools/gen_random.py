@@ -44,12 +44,12 @@ def generate_fake_program(output_file, num_lines, tokens_per_line):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a large fake code file with random tokens.")
-    parser.add_argument("--output_file", help="Path to the output file (e.g., fake_program.txt)")
-    parser.add_argument("--num_lines", type=int, help="Number of lines to generate", default=100)
+    parser.add_argument("--output", required=True, help="Path to the output file (e.g., fake_program.txt)")
+    parser.add_argument("--lines", required=True, type=int, help="Number of lines to generate")
     parser.add_argument("--tok_per_line", type=int, help="Number of tokens per line", default=10)
 
     args = parser.parse_args()
-    generate_fake_program(args.output_file, args.num_lines, args.tok_per_line)
+    generate_fake_program(args.output, args.lines, args.tok_per_line)
 
 if __name__ == "__main__":
     main()
