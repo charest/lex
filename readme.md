@@ -59,6 +59,9 @@ Lines: 10000
 
 ## 🔍 Sample Results
 
+
+![] (bench.png)
+
 ### Cachegrind
 
 Profile the lexer via Cachegrind to get cache simulations
