@@ -68,7 +68,7 @@ valgrind --tool=cachegrind $PWD/lexit ...
 
 The results for 1M lines of simulated code are below: 
 
-| Algorithm | I1 Miss | LLi Miss | L1 Miss | LLd Miss |
+| Algorithm | I1 Miss | LLi Miss | D1 Miss | LLd Miss |
 | ---- | ----- | ----- | ---- | ---- |
 | Hand | 0.00% | 0.00% | 1.2% | 1.0% |
 | FSM  | 0.00% | 0.00% | 0.9% | 0.7% |
