@@ -60,7 +60,7 @@ Lines: 10000
 ## 🔍 Sample Results
 
 
-[](bench.png)
+![image](bench.png)
 
 ### Cachegrind
 
