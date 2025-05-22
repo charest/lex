@@ -63,7 +63,7 @@ Lines: 10000
 
 Profile the lexer via Cachegrind to get cache simulations
 ```bash
-valgrind --tool=cachegrind $PWD/lexit ...
+valgrind --tool=cachegrind lexit ...
 ```
 
 The results for 1M lines of simulated code are below: 
